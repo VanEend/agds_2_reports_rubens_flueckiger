@@ -9,7 +9,7 @@ output:
 
 # 1 Introduction
 
-To predict the leave out date of plants, the book *A Handfull of Pixels* uses the model *Growing Degree Day*, or GDD for short. The core concept of GDD is that a plant needs a certain amount of initial energy, in form of solar radiation, such that it leaves out. Therefore, a cumulative sum of temperature is used, as long as the daily mean temperature exceeds a predefined threshold. As soon as the cumulative sum reaches a certain value, the model predicts the plant to leave out. At this point one can already observe that the goodness of the model strongly depends on the GDD formula used and on the method used to tweak the model parameters temperature threshold and critical cumulative sum value.
+To predict the leave out date of plants, the book *A Handful of Pixels* uses the model *Growing Degree Day*, or GDD for short. The core concept of GDD is that a plant needs a certain amount of initial energy, in form of solar radiation, such that it leaves out. Therefore, a cumulative sum of temperature is used, as long as the daily mean temperature exceeds a predefined threshold. As soon as the cumulative sum reaches a certain value, the model predicts the plant to leave out. At this point one can already observe that the goodness of the model strongly depends on the GDD formula used and on the method used to tweak the model parameters temperature threshold and critical cumulative sum value.
 
 To adjust the model given in the tutorial, I identified three possibilities. First the GDD formula used in the tutorial only considers daily mean temperature values over a certain threshold value to be accounted for the critical leave-out date. To improve the model I will change the formula, based on the Variant B formula given on [Wikipedia](https://en.wikipedia.org/wiki/Growing_degree-day) (2025). I will come back in [4 GDD formula] on why I decided to adjust the GDD formula. Second, to tweak the model parameters temperature threshold and critical cumulative sum value (at which the model predicts the plant to leave out) a simulated annealing (SA) approach was chosen. However, since SA is an heuristic method, it is well possible the algorithm does not find *the* optimal solution. To improve the model one could chose a non-linear regression method or a Bayesian optimization method. The latter is especially advisable for larger data sets, as it converges faster to an optimal solution. However, I decided to stick with the SA method such that my results and those from the tutorial could be compared. Finally, I decided to change the LOESS function from a Root Mean Square Error (RMSE) to a Mean Absolute Error (MAE) to statistically determine the optimal solution.
 
@@ -229,7 +229,7 @@ if(FALSE){
 
 # 4 GDD formula
 
-As I already mentioned in the introduction, I want to improve the model by adjusting the GDD function. The GDD function presented in the chapter *Phenology Modelling* of the Handfull of Pixels book takes only mean daily temperature values $t_{mean}$ above a certain threshold temperature $t_{ref}$ into account. That means if $t_{mean}$ is only by a slight margin lower than $t_{ref}$ then the model takes this day not in account for accumulating energy to trigger leaf unfolding even though the plant might still accumulate some energy over a certain period of the day. I therefore adjusted the GDD function in such a way that if $t_{mean}$ is below $t_{ref}$ but the maximum daily temperature $t_{max}$ is above $t_{ref}$ the day still contributes a small portion to cumulative temperature sum. I defined the contribution factor to be the same as the GDD defined in the book and only exchanged the minimal daily temperature $t_{min}$ with $t_{ref}$. Only if $t_{max}$ as well is smaller than $t_{ref}$ the model does not contribute the day. Therefore, the following formula for the GDD can be defined:
+As I already mentioned in the introduction, I want to improve the model by adjusting the GDD function. The GDD function presented in the chapter *Phenology Modelling* of the Handful of Pixels book takes only mean daily temperature values $t_{mean}$ above a certain threshold temperature $t_{ref}$ into account. That means if $t_{mean}$ is only by a slight margin lower than $t_{ref}$ then the model takes this day not in account for accumulating energy to trigger leaf unfolding even though the plant might still accumulate some energy over a certain period of the day. I therefore adjusted the GDD function in such a way that if $t_{mean}$ is below $t_{ref}$ but the maximum daily temperature $t_{max}$ is above $t_{ref}$ the day still contributes a small portion to cumulative temperature sum. I defined the contribution factor to be the same as the GDD defined in the book and only exchanged the minimal daily temperature $t_{min}$ with $t_{ref}$. Only if $t_{max}$ as well is smaller than $t_{ref}$ the model does not contribute the day. Therefore, the following formula for the GDD can be defined:
 
 $$ GDD_{t} = \sum_{i = 0}^{n} \left[ \begin{align*}
 & t_{mean,i} > t_{ref}: && \frac{1}{2} (t_{max,i} + t_{min,i}) - t_{ref} \\
@@ -253,7 +253,7 @@ To visualize the result of [4 GDD formula], I will apply the function on the yea
 >
 > I decided to let $t_{ref}$ be equal to 5.
 
-```{r, warning=FALSE, fig.align='center', fig.cap="Figure 1: GDD as the cumulative temperature sum with blue representing cold days not contributing to accumulating energy and red warm days contributing to accumulating energy for leave out for the year 2010"}
+```{r, warning=FALSE, fig.align='center', fig.cap="Figure 1: GDD as the cumulative temperature sum with blue representing cold days not contributing to accumulating energy and red warm days contributing to accumulating energy for leave out for the year 2010. Vertical line representing the date of leave out and the horizontal line the critical cumulative GDD value at this day."}
 #Filter only 2010 of temperature data set
 harvard_filter <- harvard_data |>
   filter(year == 2010)
@@ -265,6 +265,12 @@ harvard_filter <- harvard_filter |> mutate(
            ifelse(tmax >= 5, (tmax - 5)/2, 0))
   )
 )
+
+#Critical cumulative sum value:
+doy <- harvard_phenology$doy[
+  which(harvard_phenology$year == 2010)
+  ]
+gdd_val <- harvard_filter[doy, "gdd"]
 
 #Print evolution of GDD
 ggplot(data = harvard_filter) +
@@ -278,26 +284,29 @@ ggplot(data = harvard_filter) +
   #Color positive contribution red and 0 contribution blue
   scale_colour_discrete(type = c("blue", "red")) +
   
-  #Limit x-axis range
+  #Limit x-axis and y-axis range
   xlim(1, 180) +
+  ylim(0, 1000) +
+  
+  #Add visual day of leave out
+  geom_vline(xintercept = doy) + #Day of leave out
+  geom_hline(yintercept = gdd_val) +
   
   labs(
     x = "DOY",
     y = "Cumulative GDD [C°]",
-    title = "Evolution of the cumulative GDD"
+    title = "Evolution of the cumulative GDD",
+    subtitle = paste(c("Day of leave out: ",
+                       doy,
+                       "; Critical cumulative GDD value: ",
+                       gdd_val),
+                     collapse = "")
   ) +
   
   theme_bw() +
   theme(
     legend.position = "none"
   )
-
-#Critical cumulative sum value:
-doy <- harvard_phenology$doy[
-  which(harvard_phenology$year == 2010)
-  ]
-
-harvard_filter[doy, "gdd"]
 ```
 
 # 5 Optimal GDD
@@ -394,7 +403,12 @@ ggplot(data = predictions) +
   labs(
     x = "Observation",
     y = "Prediction",
-    subtitle = paste(c("f(x) = ",a ,"x + ",b), sep = "", collapse = "")
+    title = "Scatterplot: Predicted vs. observed day of leave out",
+    subtitle = paste(c("Regression function: f(x) = ",
+                       a,
+                       "x + ",
+                       b),
+                     collapse = "")
   ) +
   theme_bw()
 ```
@@ -449,7 +463,7 @@ p1 <- ggplot() +
   #Add title
   labs(
     title = "Day of leave-out 2010; observed",
-    subtitle = "Boston MA, USA"
+    subtitle = "Boston (MA); USA"
   ) +
   theme_bw()
 
@@ -572,7 +586,7 @@ p2 <- ggplot() +
   #Create title
   labs(
     title = "Day of leave-out 2010; predicted",
-    subtitle = "Boston MA, USA"
+    subtitle = "Boston (MA); USA"
   ) +
   theme_bw()
 
@@ -639,8 +653,8 @@ ggplot() +
   
   #Create title
   labs(
-    title = "Day of leave-out 2010; difference",
-    subtitle = "Boston MA, USA"
+    title = "Day of leave-out 2010; Prediction - observation",
+    subtitle = "Boston (MA); USA"
   ) +
   theme_bw()
 ```
