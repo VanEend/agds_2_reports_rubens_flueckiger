@@ -7,3 +7,246 @@ output:
     toc: TRUE
 ---
 
+# 1 Introduction
+
+# 2 Load packages and functions
+
+```{r}
+library(phenocamr)
+library(appeears)
+library(sf)
+library(dplyr)
+library(ggplot2)
+
+source("../functions/GDD_functions.R")
+```
+
+# 3 Load data
+
+## 3.1 Load phenocam data
+
+```{r}
+#Phenocam data
+if(FALSE){ #Prevents re-load
+  download_phenocam(
+    site = "harvard$",
+    veg_type = "DB",
+    roi_id = "1000",
+    daymet = TRUE,
+    phenophase = TRUE,
+    trim = 2022,
+    out_dir = "../data_raw/" #Store data set in folder
+  )
+}
+```
+
+
+```{r}
+# 1. Temperature information
+harvard_data <- read.table(
+  "../data_raw/harvard_DB_1000_3day.csv",
+  header = T, sep = ",")
+
+# 2. Day of leave out information
+harvard_phenology <- read.table(
+  "../data_raw/harvard_DB_1000_3day_transition_dates.csv",
+  header = T, sep = ","
+)
+```
+
+### 3.1.1 Preprocess data
+
+```{r}
+# Adjust temperature data set
+harvard_data <- harvard_data |>
+  mutate(
+    tmin = tmin..deg.c., #rename
+    tmax = tmax..deg.c.,
+    tmean = (tmax + tmin)/2
+    ) |> #rename
+  
+  select( #Select only relevant variables
+    date, 
+    year,
+    doy,
+    tmax,
+    tmin,
+    tmean
+  ) 
+
+# Adjust day of leave out data set
+harvard_phenology <- harvard_phenology |>
+  filter(
+    direction == "rising",
+    gcc_value == "gcc_90"
+  ) |>
+  
+  mutate(
+    doy = as.numeric(format(as.Date(transition_25),"%j")),
+    year = as.numeric(format(as.Date(transition_25),"%Y"))
+  ) |>
+  
+  select(
+    year,
+    doy,
+    transition_25,
+    threshold_25
+    )
+```
+
+## 3.2 Load NASA data
+
+### 3.2.1 MCD12Q2
+
+```{r}
+if(FALSE){ #Prevents re-load
+  #Boundries of data set
+  xmin <- -72
+  xmax <- -70
+  ymin <- 42
+  ymax <- 44
+  
+  #Create polygon of data set
+  coords <- matrix(c(
+    xmin, ymin,
+    xmax, ymin,
+    xmax, ymax,
+    xmin, ymax,
+    xmin, ymin  # Closing the polygon by repeating first point
+  ), ncol = 2, byrow = TRUE)
+  
+  # Create a simple feature geometry collection with CRS
+  roi <- st_sf(
+    geometry = st_sfc(st_polygon(list(coords)),
+                      crs = 4326)  # WGS 84
+  )
+  
+  # build the area based request/task
+  df <- data.frame(
+    task = "MCD12Q2.061_2010",
+    subtask = "subtask",
+    latitude = NA,
+    longitude = NA,
+    start = "2010-01-01",
+    end = "2010-12-31",
+    product = "MCD12Q2.061",
+    layer = c("Greenup")
+  )
+  
+  task <- rs_build_task(
+    df = df,
+    roi = roi,
+    format = "geotiff"
+  )
+  
+  # request the task to be executed
+  rs_request(
+    request = task,
+    user = "vaneend",
+    transfer = TRUE,
+    path = "../data_raw/", #Store data set in folder
+    verbose = TRUE
+  )
+}
+```
+
+### 3.2.2 DAYMET
+
+```{r}
+if(FALSE){
+  # Define the bounding box coordinates
+  xmin <- -72; xmax <- -70
+  ymin <- 42; ymax <- 44
+  coords <- matrix(c(
+    xmin, ymin,
+    xmax, ymin,
+    xmax, ymax,
+    xmin, ymax,
+    xmin, ymin  # Closing the polygon by repeating first point
+  ), ncol = 2, byrow = TRUE)
+  
+  # Create a simple feature geometry collection with CRS
+  roi <- st_sf(
+    geometry = st_sfc(st_polygon(list(coords)),
+                      crs = 4326)  # WGS 84)
+  )
+  # build the area based request/task
+  df <- data.frame(
+    task = "DAYMET.004_2010",
+    subtask = "subtask",
+    latitude = NA,
+    longitude = NA,
+    start = "2010-01-01",
+    end = "2010-12-31",
+    product = "DAYMET.004",
+    layer = c("tmax", "tmin")
+  )
+  task <- rs_build_task(
+    df = df,
+    roi = roi,
+    format = "netcdf4"
+  )
+  
+  # request the task to be executed
+  rs_request(
+    request = task,
+    user = "vaneend",
+    transfer = TRUE,
+    path = "../data_raw/",
+    verbose = TRUE
+  )
+}
+```
+
+# 4 GDD formula
+
+=> Extra sheet
+
+## 4.1 Evaluation
+
+```{r}
+#Filter only 2010 of temperature data set
+harvard_filter <- harvard_data |>
+  filter(year == 2010)
+
+#Calculate GDD
+harvard_filter <- harvard_filter |> mutate(
+  gdd = cumsum(
+    ifelse(tmean >= 5, tmean - 5,
+           ifelse(tmax >= 5, (tmax - 5)/2, 0))
+  )
+)
+
+#Print evolution of GDD
+ggplot(data = harvard_filter) +
+  geom_point(aes(
+    y = gdd,
+    x = doy,
+    colour = tmean > 0,
+    group = 1)
+  ) +
+  
+  #Color positive contribution red and 0 contribution blue
+  scale_colour_discrete(type = c("blue", "red")) +
+  
+  #Limit x-axis range
+  xlim(1, 180) +
+  
+  labs(
+    x = "DOY",
+    y = "Cumulative GDD [C°]",
+    title = "Evolution of the cumulative GDD"
+  ) +
+  
+  theme_bw() +
+  theme(
+    legend.position = "none"
+  )
+
+#Critical cumulative sum value:
+doy <- harvard_phenology$doy[
+  which(harvard_phenology$year == 2010)
+  ]
+
+harvard_filter[doy, "gdd"]
+```
