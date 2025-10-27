@@ -391,3 +391,109 @@ p1 <- ggplot() +
 p1
 ```
 
+## 6.2 Predicted result
+
+```{r}
+r_temp <- terra::rast("../data_raw/DAYMET.004_2010/DAYMET.004_1km_aid0001.nc")
+
+#Seperate maximum and minimum temperature values
+r_tmax <- r_temp["tmax"]
+r_tmin <- r_temp["tmin"]
+
+#Subset of first 180 days
+r_tmax_sub <- terra::subset(
+  r_tmax,
+  1:180
+)
+r_tmin_sub <- terra::subset(
+  r_tmin,
+  1:180
+)
+
+#Create subset of mean temperature values
+r_tmean_sub <- terra::mean(r_tmax_sub, r_tmin_sub)
+```
+
+1. Split tmax data value in tmax < tref == 0, tmax > tref & tmean < tref == tmax, tmean > tref == 30
+2. Cumsum of split tmax data
+3. Cumsum of tmean data
+4. combine split tmax data and tmean data
+5. Apply GDD funciton to data in 4.
+
+=> functions in extra sheet
+
+```{r}
+# 1. Pre processing for tmax data
+#Check if tmean < ref
+phen_check <- terra::app(
+  r_tmean_sub,
+  fun = tmean_check,
+  t_ref = optim_par[1] 
+)
+#Extract max value of phen_check
+phen_check_1 <- terra::mosaic(
+  x = r_tmax_sub,
+  y = phen_check,
+  fun = "max"
+)
+
+# 2. Calculate tmax cumsum
+phen_pred_max <- terra::app(
+  phen_check_1,
+  fun = cumsum_tmax,
+  t_ref = optim_par[1]
+)
+
+# 3. Calculate tmean cumsum
+phen_pred_mean <- terra::app(
+  r_tmean_sub,
+  fun = cumsum_tmean,
+  t_ref = optim_par[1]
+)
+
+
+# 4. Combine mean and max data set
+phenology_predict <- phen_pred_mean + phen_pred_max
+
+# 5. Apply function onto whole data set
+pheno_predic <- terra::app(
+  phenology_predict,
+  fun = extract_doy,
+  gdd_crit = optim_par[2]
+)
+```
+
+```{r}
+#For plotting reset the coordinate reference frame
+terra::crs(pheno_predic) <- "epsg:4326"
+
+p2 <- ggplot() +
+  tidyterra::geom_spatraster(data = pheno_predic) +
+  
+  #Legend
+  scale_fill_viridis_c( 
+    na.value = NA,
+    name = "DOY"
+    ) +
+  
+  #Due to display issues, manually create tick labels 
+  scale_y_continuous(
+    name = "Longitude",
+    breaks = seq(42, 44, by = 0.5),
+    labels = c("42°N", "42.5°N", "43°N", "43.5°N", "44°N")
+    ) +
+  scale_x_continuous(
+    name = "Lattitude",
+    breaks = seq(-72, -70, by = 0.5),
+    labels = c("72°W", "71.5°W", "71°W", "70.5°W", "70°W")
+    ) +
+  
+  #Create title
+  labs(
+    title = "Day of leave-out 2010; predicted",
+    subtitle = "Boston MA, USA"
+  ) +
+  theme_bw()
+
+p2
+```
