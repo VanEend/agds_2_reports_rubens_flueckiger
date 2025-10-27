@@ -9,9 +9,23 @@ output:
 
 # 1 Introduction
 
+To predict the leave out date of plants, the book *A Handfull of Pixels* uses the model *Growing Degree Day*, or GDD for short. The core concept of GDD is that a plant needs a certain amount of initial energy, in form of solar radiation, such that it leaves out. Therefore, a cumulative sum of temperature is used, as long as the daily mean temperature exceeds a predefined threshold. As soon as the cumulative sum reaches a certain value, the model predicts the plant to leave out. At this point one can already observe that the goodness of the model strongly depends on the GDD formula used and on the method used to tweak the model parameters temperature threshold and critical cumulative sum value.
+
+To adjust the model given in the tutorial, I identified three possibilities. First the GDD formula used in the tutorial only considers daily mean temperature values over a certain threshold value to be accounted for the critical leave-out date. To improve the model I will change the formula, based on the Variant B formula given on [Wikipedia](https://en.wikipedia.org/wiki/Growing_degree-day) (2025). I will come back in [4 GDD formula] on why I decided to adjust the GDD formula. Second, to tweak the model parameters temperature threshold and critical cumulative sum value (at which the model predicts the plant to leave out) a simulated annealing (SA) approach was chosen. However, since SA is an heuristic method, it is well possible the algorithm does not find *the* optimal solution. To improve the model one could chose a non-linear regression method or a Bayesian optimization method. The latter is especially advisable for larger data sets, as it converges faster to an optimal solution. However, I decided to stick with the SA method such that my results and those from the tutorial could be compared. Finally, I decided to change the LOESS function from a Root Mean Square Error (RMSE) to a Mean Absolute Error (MAE) to statistically determine the optimal solution.
+
+In the following chapters I will implement the GDD function and the RMSE to MAE changes to (hopefully) improve the step-by-step model used in the *A handful of pixels* tutorial.
+
+> **Important**
+>
+> In certain circumstances a bad allocation error *(Error: bad:alloc)* might occur while running this code. The reason is the size of the computing input raster data and the lack of free memory of the PC.
+>
+> As a work around for this error: Make sure to close open taps (the Internet browser for instant) to reduce memory pulled form these taps.
+
 # 2 Load packages and functions
 
-```{r}
+To reduce the length of this file I saved functions created for this exercise into a separate R file which I will load in with all necessary packeges used.
+
+```{r, warning=FALSE, message=FALSE}
 library(phenocamr)
 library(appeears)
 library(sf)
@@ -23,7 +37,11 @@ source("../functions/GDD_functions.R")
 
 # 3 Load data
 
+To determine the optimal hyperparamteres of the GDD function, we will need a reference site on which we will fit our model (the Harvard site) as well as the DAYMET data set (from NASA) to spatially illustrate the result of the model and the MCD12Q2 data set (also from NASA) to compare the model result with the "actual" observations.
+
 ## 3.1 Load phenocam data
+
+In a first step we will acquire the Phenocam data set of the Harvard data set. To improve the loading speed I saved the data set into the *data_raw* folder and used a if(FALSE) string to prevent the code to re-upload the data set from the Phenocam server.
 
 ```{r}
 #Phenocam data
@@ -40,6 +58,7 @@ if(FALSE){ #Prevents re-load
 }
 ```
 
+Afterwards we can simply load in the necessary data sets. The first data set (1.) contains the temperature information and the second (2.) information about leave out dates.
 
 ```{r}
 # 1. Temperature information
@@ -55,6 +74,10 @@ harvard_phenology <- read.table(
 ```
 
 ### 3.1.1 Preprocess data
+
+Then we can start to preprocess the data set. First we will rename the minimal and maximal daily temperature variables, such that they can be easier selected later on, and create a further variable *tmean* containing the mean daily temperature derived from the average of minimum and maximum daily temperature. Then we only select necessary variables for our analysis (date, year, day of the year (doy), minimal, maximal and mean daily temperature).
+
+For the data set containing the day of leave out information we first filter for *rising* (meaning leave grow condition) and *gcc_90* (meaning a Green Chromatic Coordinate (GCC) value of at least 90%) to ensure only leave out dates of leave grow and a threshold of at least 90% of plants that leaved-out. Afterwards we convert the doy and year format to a only year and only doy format and select only variables of year, doy, date of leave out and GCC value.
 
 ```{r}
 # Adjust temperature data set
@@ -96,7 +119,11 @@ harvard_phenology <- harvard_phenology |>
 
 ## 3.2 Load NASA data
 
+To acquire the NASA raster data MCD12Q2 and DAYMET we will repeat the same procedure as in [3.1 Load phenocam data]. However, we need to specify the area over which we want the data as well.
+
 ### 3.2.1 MCD12Q2
+
+First we will acquire the MCD12Q2 data set. I used the if(FALSE) statement again to prevent a re-acquire of the data set, since I stored the needed files in the *data_raw* folder. As I encountered some difficulties to plot the MCD12Q2 file on a netcdf4 format, I decided to store the the file in a geotiff format. Since both formats work with the `terra` package we do not have to worry about further complications.
 
 ```{r}
 if(FALSE){ #Prevents re-load
@@ -152,6 +179,8 @@ if(FALSE){ #Prevents re-load
 
 ### 3.2.2 DAYMET
 
+For the DAYMET surface temperature data we can now repeat the same procedure as in 3.2.1 with the exception of storing the data in a netcdf4 format.
+
 ```{r}
 if(FALSE){
   # Define the bounding box coordinates
@@ -200,11 +229,31 @@ if(FALSE){
 
 # 4 GDD formula
 
-=> Extra sheet
+As I already mentioned in the introduction, I want to improve the model by adjusting the GDD function. The GDD function presented in the chapter *Phenology Modelling* of the Handfull of Pixels book takes only mean daily temperature values $t_{mean}$ above a certain threshold temperature $t_{ref}$ into account. That means if $t_{mean}$ is only by a slight margin lower than $t_{ref}$ then the model takes this day not in account for accumulating energy to trigger leaf unfolding even though the plant might still accumulate some energy over a certain period of the day. I therefore adjusted the GDD function in such a way that if $t_{mean}$ is below $t_{ref}$ but the maximum daily temperature $t_{max}$ is above $t_{ref}$ the day still contributes a small portion to cumulative temperature sum. I defined the contribution factor to be the same as the GDD defined in the book and only exchanged the minimal daily temperature $t_{min}$ with $t_{ref}$. Only if $t_{max}$ as well is smaller than $t_{ref}$ the model does not contribute the day. Therefore, the following formula for the GDD can be defined:
+
+$$ GDD_{t} = \sum_{i = 0}^{n} \left[ \begin{align*}
+& t_{mean,i} > t_{ref}: && \frac{1}{2} (t_{max,i} + t_{min,i}) - t_{ref} \\
+& t_{mean,i} < t_{ref} \cap t_{max,i} > t_{ref}: && \frac{1}{2} (t_{max,i} - t_{ref}) \\
+& t_{max,i} < t_{ref}: && 0 
+\end{align*}  \right]$$
+
+> **Note**
+>
+> I defined the second term to be $\frac{t_{max}+t_{ref}}{2} - t_{ref}$. However:
+>
+> $$ \frac{t_{max}+t_{ref}}{2} - t_{ref} = \frac{t_{max}}{2} + \frac{t_{ref}}{2} - t_{ref}  = \frac{t_{max}}{2} - \frac{t_{ref}}{2} = \frac{t_{max} - t_{ref}}{2}$$
+
+This variation of GDD was presented on the [Wikipedia](https://en.wikipedia.org/wiki/Growing_degree-day) page (2025). I only decided to add a further conditional statement, that if $t_{max}$ drops below $t_{ref}$, the model does not contribute this day.
 
 ## 4.1 Evaluation
 
-```{r}
+To visualize the result of [4 GDD formula], I will apply the function on the year 2010. To accomplish that we first need to extract only the year 2010 form the Harvard temperature data set and then calculate the GDD over all days of the year. To visualize the evolution of GDD over the first 180 days of the year 2010, I decided to include a plot.
+
+> **Note**
+>
+> I decided to let $t_{ref}$ be equal to 5.
+
+```{r, warning=FALSE, fig.align='center', fig.cap="Figure 1: GDD as the cumulative temperature sum with blue representing cold days not contributing to accumulating energy and red warm days contributing to accumulating energy for leave out for the year 2010"}
 #Filter only 2010 of temperature data set
 harvard_filter <- harvard_data |>
   filter(year == 2010)
@@ -253,13 +302,17 @@ harvard_filter[doy, "gdd"]
 
 # 5 Optimal GDD
 
+To derive an optimal value for the critical value of the GDD (GDD_Crit) such that the plants start to leaf-out and for $t_{ref}$, one can calibrate the GDD model hyperparamters *GDD_Crit* and $t_{ref}$ with past observations of leaf-out dates. The resulting calibrated hyperparameters and the goodness of the result is strongly dependent on the calibration method and LOESS function used. In the book a *simulated annealing* (SA) method combined with root mean square error (RMSE) LOESS function was chosen. To compare the results, I have chosen to remain with the SA such that the result of my optimization of the GDD function can be compared with the result given in the book. However, for larger data sets one might consider using the Bayesian optimization method due to the fact that the latter method converges faster to an "optimal" solution. In addition it is worth mentioning at this point that the SA-method is a heuristic method. The problem with heuristic optimization models are that they do not always find *the* optimal solution. If *the* optimal solution wants to be found, one might consider using an alternative optimization tool.
+
 ## 5.1 LOESS function
 
-=> Extra sheet
+To calibrate the hyperparamters I opted to use the Mean average Error (MAE) function instead of the RSME since I wanted to give more importance to small errors.
 
 ## 5.2 SA Optimization
 
-```{r}
+Given the LOESS function in [5.1 LOESS function] and the results of [4.1 Evaluation], I re-used the code given in the tutorial and only changed the initial guess for the critical cumulative sum value and the function from RMSE to MAE. I set the initial guess for the critical cumulative sum to be near the value in [4.1 Evaluation] because I assumed the effective result will be near this result (output: 157.445; rounded to the nearest whole number: 157).
+
+```{r, warning=FALSE}
 # starting model parameters
 par = c(5, 157)
 
@@ -290,6 +343,8 @@ optim_par = GenSA::GenSA(
 
 ## 5.3 Output analysis
 
+Finally I will analyse the resulting parameters. To do so, first I will group the whole temperature data set from the Harvard site by year and summaries the values by the predicted day of leave out, with the help of the function created in [4 GDD formula].
+
 ```{r}
 # run the model for all years
 # to get the phenology predictions
@@ -311,14 +366,16 @@ predictions <- na.omit(predictions) |>
   )
 ```
 
-```{r}
+Given the resulting data frame, we can now plot the observed values (phenology data set) with the predicted values. I added a dotted line, which should represent the ideal case, where the predicted values exactly math the observed values, as well as a solid line, which represent a linear fit through the plotted data (i.e. the mean modeled vs. observed case deviation).
+
+```{r, echo=FALSE}
 #Extract coefficients of model
 fit <- lm(prediction ~ observation, data = predictions)
 a <- round(as.numeric(fit$coefficients[2]), 3) #Slope
 b <- round(as.numeric(fit$coefficients[1]), 3) #Intercept
 ```
 
-```{r}
+```{r, message=FALSE, fig.align='center', fig.cap="Figure 2: Scatterplot of observed and modelled DOY of leave out. A linear regression (solid line) is overplotted, including a confidential interval (grey area) and a ideal szenario of relation between observed and medelled DOY (dotted line)."}
 ggplot(data = predictions) +
   geom_point(aes(
     x = observation,
@@ -342,9 +399,15 @@ ggplot(data = predictions) +
   theme_bw()
 ```
 
+The closer the distance between the solid line and the dotted line, the better the model predicts the observed phenomena. As we can see, the discrepancy between solid, modeled case and the idealistic case is very small (this can also be seen by the inclination of the curve (the factor in front of x) of the function f(x) of the fitted curve. As the inclination approaches one, the better the prediction matches the observations. In our case the inclination is approximately 0.816 and therefore pretty good. Note that the constant factor can be neglected for the goodness of the result, as we could do a simple bias-correction if the prediction tend to over or underestimate the observation but predict the "inclination" correctly).
+
 # 6 Spatial analysis
 
+Finally we want to apply the function created up until now on a two dimensional space. Like in the tutorial, we will select the greater area of Boston MA in the US in 2010. Hereby we will first create a plot containing the observed values given the MCD12Q2 data set from NASA and then create a predicted plot given the parameters derived in [5 Optimal GDD].
+
 ## 6.1 Observed result
+
+In a first step we will load in the MCD12Q2 data set, set the coordinate reference frame to be the WGS84 and then transform the numerical values of the DOY variable to start at 1 at the 1. January 2010. Note that we might need to discard values below the 1.1.2010. This set will serve as the reference result.
 
 ```{r}
 r1 <- terra::rast(
@@ -359,7 +422,9 @@ val <- as.numeric(as.Date("2010-01-01"))
 r1 <- terra::ifel(r1 > val, r1, NA) - val
 ```
 
-```{r}
+In the next step we can now plot the result. To compare both results side by side, I will store the resulting graph inside a variable as well.
+
+```{r, fig.align='center', fig.cap="Figure 3: Spacially observed date of leave out for the greater Boston (MA) region in the US in 2010 given the MCD12Q12 data set"}
 p1 <- ggplot() +
   tidyterra::geom_spatraster(data = r1) +
   
@@ -393,6 +458,12 @@ p1
 
 ## 6.2 Predicted result
 
+In the next step we will create the spacial result given the predictions we made earlier. We first load in the DAYMET data set and split it into a raster containing daily minimum and daily maximum temperature. Then we can create an additional raster containing the daily mean value based on the minimum and maximum daily temperature data sets.
+
+> **Note**
+>
+> To reduce run time of the code, I will only consider the first 180 days of 2010 to be relevant for the date of leave out.
+
 ```{r}
 r_temp <- terra::rast("../data_raw/DAYMET.004_2010/DAYMET.004_1km_aid0001.nc")
 
@@ -414,13 +485,21 @@ r_tmin_sub <- terra::subset(
 r_tmean_sub <- terra::mean(r_tmax_sub, r_tmin_sub)
 ```
 
-1. Split tmax data value in tmax < tref == 0, tmax > tref & tmean < tref == tmax, tmean > tref == 30
-2. Cumsum of split tmax data
-3. Cumsum of tmean data
-4. combine split tmax data and tmean data
-5. Apply GDD funciton to data in 4.
+Since my GDD function contains two raster data sets ($t_{mean}$ and $t_{max}$) and `terra::app()` can only handle one raster data set at a time, we need to split up the function into five steps.
 
-=> functions in extra sheet
+In the first step we need to create a $t_{max}$ raster data set, where we can exactly determine if a value at a given location satisfies the second condition of the defined function in [4 GDD formula]. To do that, I created a function, which takes the $t_{mean}$ data set as an input and returns 0 if $t_{mean}$ value at the position $i$ is below the threshold and 30 if it is above (*Note:* 30 is an arbitrary number. One can choose any number as long as it is sufficiently large). Given this raster data, we can now combine this information with the $t_{max}$ data set with the `terra::mosaic()` function using *max* as the combination function. This will return the maximum value of the *"adjusted"* $t_{mean}$ data set and the $t_{max}$ data set at each location.
+
+In the second step we will now calculate the cumulative sum over the newly created raster data from the first step. However, we will limit contribution values of $t_{max}$ to be bigger than or equal to the temperature threshold value and lower than 30. This will guarantee us to only sum up values which are definitely lower than the values of $t_{mean} > t_{ref}$. Since we set all values of $t_{mean}$ to be bigger than the threshold to 30, the only remaining values will be the one we want to be contributed by the function $\frac{t_{max} - t_{ref}}{2}$.
+
+In a third step, we simply calculate the cumulative sum of $t_{mean}$ values above a certain threshold value as defined in [4 GDD formula].
+
+In a fourth step, we will combine both raster data sets according to the function in [4 GDD formula].
+
+> **Note**
+>
+> Since both $t_{max}$ and $t_{mean}$ raster data are by now in a cumulative sum format, simply adding both rasters together will return the wished solution.
+
+In the fifth and final step we can now apply a function that extracts the date of leave out given the critical cumulative sum value based on the model of [5 Optimal GDD].
 
 ```{r}
 # 1. Pre processing for tmax data
@@ -463,7 +542,9 @@ pheno_predic <- terra::app(
 )
 ```
 
-```{r}
+With the final raster calculated, we can now plot the result. However, such that we are able to plot the result, first we need to re-define the coordinate reference system. Again, I will save the resulting graphic inside variable, such that we can compare the predicted and the observed leave out dates.
+
+```{r, fig.align='center', fig.cap="Figure 4: Spatially modelled date of leave out for the greater Boston (MA) region in the US in 2010 given the formula in chapter 4 and the DAYMET data set."}
 #For plotting reset the coordinate reference frame
 terra::crs(pheno_predic) <- "epsg:4326"
 
@@ -500,6 +581,12 @@ p2
 
 # 7 Discussion
 
+To analyse the result, I first will create another raster, which will contain the difference between predicted and observed leave out dates. This will ease the interpretation of discrepancies. To do that however, we need to make sure that both raster data have the same dimensions and the same extent.
+
+by simply entering the name of the raster data, we get crucial information about the this data. For the MCD12Q2 data set we can see that the raster has a format of 481 rows by 481 columns and the DAYMET data comes in 226 rows and 226 columns. With the `terra::resample()` function we can decrease the amount of rows and columns from the MCD12Q2 to match these of the DAYMET data (I decided to downscale rather to upscale). Inside the dimension argument needed I also defined the boundaries of the raster data.
+
+With the aid of the function `terra::ext()` I made finally sure that the DAYMET data set had the same extent as the MCD12Q2 raster.
+
 ```{r}
 #Set dimension for MCD12Q2 data set to be equal to prediction set
 dimension <- terra::rast(
@@ -517,7 +604,9 @@ r1 <- terra::resample(r1, dimension, method = "bilinear")
 terra::ext(pheno_predic) <- c(-72, -70, 42, 44)
 ```
 
-```{r}
+With the transformation done we can now simply subtract the observed leave out date from the predicted leave out date. After re-defining the coordinate reference frame we can plot the result.
+
+```{r, fig.align='center', fig.cap="Figure 5: Difference between modelled and observed date of leave out in the greater Boston (MA) region in the US in 2010, where red shows a earlier leave out observed than predicted and blue a later leave out observed than predicted."}
 diff <- pheno_predic - r1
 
 #Set coordinate reference system for plot
@@ -556,6 +645,20 @@ ggplot() +
   theme_bw()
 ```
 
-```{r}
+The difference between both data set show a general 30-day discrepancy between predicted and observed leave out date. Hereby the model predicts a leave out date which is later than observed. This phenomenon is the highest in the top left corner; the region with the highest altitude of the region observed. Along the urban region (bottom right), the predicted and observed leave out date seam to be near identical. Coastal region even show a marginal earlier leave out date in the predicted case compared to the observed case.
+
+To better analyse the spacial extent of leave-out dates of predicted and observed case, I additionally created a plot containing a side by side visualization of predicted and observed leave out date of the greater Boston (MA) region in the US.
+
+```{r, fig.align='center', fig.cap="Figure 6: Side-by-side comparison of left the observed date of leave out in 2010 and right the predicted date of leave out in 2010 in Boston (MA) in the US."}
 cowplot::plot_grid(p1, p2)
 ```
+
+In the observed case plants seam to leave out later in coast regions and in the upper left corner, which I assume to be at a higher altitude. All other regions seem to be rather homogeneous. however, one can see a slight earlier leave out in the lower right corner; the city of Boston, Massachusetts. The gradient between lower region to higher region, as well as the urban heat island effect is even better visible in the predicted leave out date raster. One can see that plants leave out progressively later the northern the location.
+
+To understand on why we might observe these phenomena we need to understand the climatological frame of early 2010 of the Northeastern region of the US. 2010 started with a moist and cold winter (starting in December 2009 until February 2010; some region reported a record amount of snowfall) followed by a record warmth degree in the spring season, which lead to the 8th smallest April snow cover extend of the past 44 years (NOAA, 2011). Given that information we can conclude, that the lack of snow cover in the greater Boston region might be the reason for the earlier than predicted leave out dates. As long as snow covers the ground, plants are not able to access (enough) energy in form of solar radiation to trigger blossoming. Our predicted model however accounts the snow cover in a way. Since the critical cumulative temperature value is not a physical number but rather an arbitrary number, it can help to account for snow cover up until a certain time in the year. That is done while adjusting the hyperparameters with known events. However, since in 2010 the snow cover already melted in late March to early April, blossoming already started at this point. Proof for that hypothesis is the highest discrepancy between observed and predicted leave out dates in higher regions. Since the urban heat island effect is strongly effecting temperature and the snow cover in urban regions, the effect is less pronoun in Boston. Hence we are seeing only small to no discrepancy between observed and predicted leave out dates in Boston. The coastal region phenomena might lead from warming effects in the winter months due to the proximity to the ocean and not accounted effects in the spring months, such as lack of water or too high salinity. In summary we can conclude that the main contribution to earlier than predicted leave out dates root from lack of snow cover due to rapid warmth in early spring in the Northeastern region of the US.
+
+# 8 Sources
+
+Wikipedia (2025). Growing degree-day. Wikipedia. Retrieved on October 22, 2025 from <https://en.wikipedia.org/wiki/Growing_degree-day>.
+
+NOAA (2011). National Centers for Environmental Information, Monthly National Climate Report for Annual 2010.Retrieved on October 22, 2025 from <https://www.ncei.noaa.gov/access/monitoring/monthly-report/national/201013>. DOI: <https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00674>
