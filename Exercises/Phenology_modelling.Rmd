@@ -250,3 +250,94 @@ doy <- harvard_phenology$doy[
 
 harvard_filter[doy, "gdd"]
 ```
+
+# 5 Optimal GDD
+
+## 5.1 LOESS function
+
+=> Extra sheet
+
+## 5.2 SA Optimization
+
+```{r}
+# starting model parameters
+par = c(5, 157)
+
+# limits to the parameter space
+lower <- c(-10,0)
+upper <- c(45,600)
+
+# data needs to be provided in a consistent
+# single data file, a nested data structure
+# will therefore accept non standard data formats
+data <- list(
+  model = harvard_data,
+  validation = harvard_phenology
+  )
+
+# optimize the model parameters
+optim_par = GenSA::GenSA(
+ par = par,
+ fn = mae_gdd,
+ lower = lower,
+ upper = upper,
+ control = list(
+   max.call = 4000
+   ),
+ data = data
+)$par
+```
+
+## 5.3 Output analysis
+
+```{r}
+# run the model for all years
+# to get the phenology predictions
+predictions <- harvard_data |>
+  group_by(year) |>
+  summarize(
+   prediction = gdd_model(
+    tmean = tmean,
+    tmax = tmax,
+    t_ref = optim_par[1],
+    gdd_crit = optim_par[2]
+  )  
+  )
+
+#Add observed values to dataframe
+predictions <- na.omit(predictions) |>
+  mutate(
+    observation = harvard_phenology$doy
+  )
+```
+
+```{r}
+#Extract coefficients of model
+fit <- lm(prediction ~ observation, data = predictions)
+a <- round(as.numeric(fit$coefficients[2]), 3) #Slope
+b <- round(as.numeric(fit$coefficients[1]), 3) #Intercept
+```
+
+```{r}
+ggplot(data = predictions) +
+  geom_point(aes(
+    x = observation,
+    y = prediction
+    )
+  ) +
+  geom_abline( #Ideal case
+    intercept = 0,
+    slope = 1,
+    linetype = "dotted"
+  ) + 
+  geom_smooth( #Linear fit to observed cases
+    aes(observation, prediction),
+    colour = "grey25",
+    method = "lm") + 
+  labs(
+    x = "Observation",
+    y = "Prediction",
+    subtitle = paste(c("f(x) = ",a ,"x + ",b), sep = "", collapse = "")
+  ) +
+  theme_bw()
+```
