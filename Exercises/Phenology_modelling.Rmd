@@ -341,3 +341,53 @@ ggplot(data = predictions) +
   ) +
   theme_bw()
 ```
+
+# 6 Spatial analysis
+
+## 6.1 Observed result
+
+```{r}
+r1 <- terra::rast(
+  "../data_raw/MCD12Q2.061_2010/MCD12Q2.061_Greenup_0_doy2010001000000_aid0001.tif"
+  )
+terra::crs(r1) <- "epsg:4326"
+
+#Extract lowest possible date
+val <- as.numeric(as.Date("2010-01-01"))
+
+#Convert into DOY format and NA all values below 01.01.2010
+r1 <- terra::ifel(r1 > val, r1, NA) - val
+```
+
+```{r}
+p1 <- ggplot() +
+  tidyterra::geom_spatraster(data = r1) +
+  
+  #Add legend
+  scale_fill_viridis_c(
+    na.value = NA,
+    name = "DOY"
+    ) +
+  
+  #Due to display issues, manually create tick labels 
+  scale_y_continuous(
+    name = "Longitude",
+    breaks = seq(42, 44, by = 0.5),
+    labels = c("42°N", "42.5°N", "43°N", "43.5°N", "44°N")
+    ) +
+  scale_x_continuous(
+    name = "Lattitude",
+    breaks = seq(-72, -70, by = 0.5),
+    labels = c("72°W", "71.5°W", "71°W", "70.5°W", "70°W")
+    ) +
+  
+  #Add title
+  labs(
+    title = "Day of leave-out 2010; observed",
+    subtitle = "Boston MA, USA"
+  ) +
+  theme_bw()
+
+p1
+```
+
