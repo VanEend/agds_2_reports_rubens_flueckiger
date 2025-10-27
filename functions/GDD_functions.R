@@ -44,3 +44,38 @@ mae_gdd <- function(par, data) {
   # return rmse value
   return(mae)
 }
+
+#-------------------------------------------------------------------------------
+
+# Growing degree day functions for spacial analysis
+
+#Function to calculate cumsum of only tmean value above threshold
+cumsum_tmean <- function(tmean, t_ref){
+  gdd <- cumsum(
+    ifelse(
+      tmean >= t_ref, tmean - t_ref, 0
+    )
+  )
+  return(gdd)
+}
+
+#Function to calculate cumsum of only tmax value inside certain range
+cumsum_tmax <- function(tmax, t_ref){
+  gdd <- cumsum(
+    ifelse(tmax >= t_ref, ifelse(tmax < 30, (tmax - t_ref)/2, 0), 0)
+  )
+  return(gdd)
+}
+
+#Check if tmean < ref and return 0 if so, if not 30
+tmean_check <- function(tmean, t_ref){
+  gdd <- ifelse(tmean < t_ref, 0, 30)
+  
+  return(gdd)
+}
+
+#Function to extract date of leaf out
+extract_doy <- function(rast, gdd_crit){
+  doy <- unlist(which(rast >= gdd_crit))[1]
+  return(doy)
+}
