@@ -1,0 +1,2 @@
+https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected/MCD12Q2.061/MCD12Q2.A2010001.h12v04.061.2022096142536/MCD12Q2.A2010001.h12v04.061.2022096142536.hdf
+https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected/MCD12Q2.061/MCD12Q2.A2010001.h13v04.061.2022096140227/MCD12Q2.A2010001.h13v04.061.2022096140227.hdf
