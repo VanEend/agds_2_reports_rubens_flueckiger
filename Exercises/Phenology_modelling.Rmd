@@ -497,3 +497,65 @@ p2 <- ggplot() +
 
 p2
 ```
+
+# 7 Discussion
+
+```{r}
+#Set dimension for MCD12Q2 data set to be equal to prediction set
+dimension <- terra::rast(
+  nrows = 226, #Number of rows
+  ncols = 226, #Number of colums
+  xmin = -72, #Extend
+  xmax = -70,
+  ymin = 42,
+  ymax = 44
+  )
+
+r1 <- terra::resample(r1, dimension, method = "bilinear")
+
+#Ste extend of both raster data to be equal
+terra::ext(pheno_predic) <- c(-72, -70, 42, 44)
+```
+
+```{r}
+diff <- pheno_predic - r1
+
+#Set coordinate reference system for plot
+terra::crs(diff) <- "epsg:4326"
+
+ggplot() +
+  tidyterra::geom_spatraster(data = diff) +
+  
+  #Legend
+  scale_fill_gradient2( #use gradient for better visualisation
+    low = "blue4",
+    mid = "azure2",
+    high = "red4",
+    breaks = seq(-30, 90, by = 30),
+    na.value = NA,
+    name = "DOY"
+    ) +
+  
+  #Due to display issues, manually create tick labels 
+  scale_y_continuous(
+    name = "Longitude",
+    breaks = seq(42, 44, by = 0.5),
+    labels = c("42°N", "42.5°N", "43°N", "43.5°N", "44°N")
+    ) +
+  scale_x_continuous(
+    name = "Lattitude",
+    breaks = seq(-72, -70, by = 0.5),
+    labels = c("72°W", "71.5°W", "71°W", "70.5°W", "70°W")
+    ) +
+  
+  #Create title
+  labs(
+    title = "Day of leave-out 2010; difference",
+    subtitle = "Boston MA, USA"
+  ) +
+  theme_bw()
+```
+
+```{r}
+cowplot::plot_grid(p1, p2)
+```
