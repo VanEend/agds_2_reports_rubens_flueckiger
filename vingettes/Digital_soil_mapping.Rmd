@@ -96,3 +96,83 @@ balance_train <- df_train |>
   summarise(count = n())
 ```
 
+
+# Variable selection
+
+## Select variables
+
+```{r}
+set.seed(42)
+
+# run the algorithm
+bor <- Boruta::Boruta(
+    y = df_train[, target], # Target variable
+    x = df_train[, predictors], # All available predictors
+    maxRuns = 50, # Number of iterations. Set to 30 or lower if it takes too long
+    num.threads = parallel::detectCores()-1)
+
+# obtain results: a data frame with all variables, ordered by their importance
+df_bor <- Boruta::attStats(bor) |> 
+  tibble::rownames_to_column() |> 
+  arrange(dplyr::desc(meanImp))
+
+# plot the importance result
+ggplot(data = df_bor, aes(x = reorder(rowname, meanImp),
+                          y = meanImp,
+                          fill = decision)) +
+  geom_bar(stat = "identity", width = 0.75) +
+  scale_fill_manual(values = c("grey30", "tomato", "grey70")) +
+  labs(
+    x = "",
+    y = "Variable importance",
+    title = "Variable importance based on Boruta"
+  ) +
+  theme_bw() +
+  coord_flip()
+```
+
+```{r}
+predictors_selected <- df_bor |> 
+  filter(decision == "Confirmed") |> # Filter all variables with "confirmed"
+  pull(rowname) # Extract rownames from it
+```
+
+## Train new model
+
+```{r}
+rf_bor <- ranger( 
+  formula = factor(df_train[, target]) ~ ., # target variable
+  data = df_train[, predictors_selected], # Predictor variables
+  seed = 42, # Specify the seed for randomization to reproduce the same model again
+  num.threads = parallel::detectCores() - 1) 
+
+# quick report and performance of trained model object
+rf_bor
+```
+
+## Evaluate new model
+
+```{r}
+rf_eval_vs <- predict(
+  rf_bor,           # RF model
+  data = df_test,   # Predictor data
+  num.threads = parallel::detectCores() - 1
+)
+
+# Save predictions to validation df
+df_eval_vs <- data.frame(df_test$waterlog.100)
+df_eval_vs$pred <- rf_eval_vs$predictions
+
+# Rename column
+df_eval_vs <- df_eval_vs |>
+  rename("waterlog.100" = "df_test.waterlog.100")
+```
+
+```{r}
+conf_matrix_vs <- confusionMatrix(
+  data = df_eval_vs$pred,
+  reference = as.factor(df_eval_vs$waterlog.100),
+  dnn = c("Predicted", "Observed")
+)
+conf_matrix_vs
+```
