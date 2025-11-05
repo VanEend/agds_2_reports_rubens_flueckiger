@@ -178,3 +178,79 @@ conf_matrix_vs <- confusionMatrix(
 conf_matrix_vs
 ```
 
+# Model optimization
+
+## Hyperparameter adjustment
+
+```{r}
+# Create string with all variables
+fun_pred <- paste(
+  c("waterlog.100 ~", paste(predictors, collapse = " + ")),
+  collapse = " "
+)
+
+# Convert into a caret-readable string
+fun_pred <- formula(fun_pred)
+```
+
+```{r}
+mod_cv <- train(
+  fun_pred, # Model function
+  data = df_train, # training set
+  method = "ranger", # Random Forest model
+  trControl = trainControl(
+    method = "cv", # Cross-Validation method
+    number = 5, # 5-Fold CV
+    savePredictions = "final"
+  ),
+  tuneGrid = data.frame(
+    .mtry = c(1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 60, 70, 80),
+    .min.node.size = c(1, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300, 400, 500),
+    .splitrule = "variance"
+  ),
+  metric = "MAE" # LOESS function
+)
+mod_cv
+```
+
+## Train optimized model
+
+```{r}
+rf_optim <- ranger( 
+  formula = factor(df_train[, target]) ~ ., # target variable
+  data = df_train[, predictors_selected], # Predictor variables
+  mtry = 10, # Given from above
+  min.node.size = 50, # Given from above
+  seed = 42, # Specify the seed for randomization to reproduce the same model again
+  num.threads = parallel::detectCores() - 1)
+
+# quick report and performance of trained model object
+rf_optim
+```
+
+## Evaluate optimized model
+
+```{r}
+rf_eval_optim <- predict(
+  rf_optim, # RF model
+  data = df_test, # Predictor data
+  num.threads = parallel::detectCores() - 1
+)
+
+# Save predictions to validation df
+df_eval_optim <- data.frame(df_test$waterlog.100)
+df_eval_optim$pred <- rf_eval_optim$predictions
+
+# Rename column
+df_eval_optim <- df_eval_optim |>
+  rename("waterlog.100" = "df_test.waterlog.100")
+```
+
+```{r}
+conf_matrix_optim <- confusionMatrix(
+  data = df_eval_optim$pred,
+  reference = as.factor(df_eval_optim$waterlog.100),
+  dnn = c("Predicted", "Observed")
+)
+conf_matrix_optim
+```
