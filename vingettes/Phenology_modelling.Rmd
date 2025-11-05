@@ -23,7 +23,7 @@ In the following chapters I will implement the GDD function and the RMSE to MAE 
 
 # 2 Load packages and functions
 
-To reduce the length of this file I saved functions created for this exercise into a separate R file which I will load in with all necessary packeges used.
+To reduce the length of this file I saved functions created for this exercise into a separate R file which I will load in with all necessary packages used.
 
 ```{r, warning=FALSE, message=FALSE}
 library(phenocamr)
@@ -296,11 +296,10 @@ ggplot(data = harvard_filter) +
     x = "DOY",
     y = "Cumulative GDD [C°]",
     title = "Evolution of the cumulative GDD",
-    subtitle = paste(c("Day of leave out: ",
-                       doy,
-                       "; Critical cumulative GDD value: ",
-                       gdd_val),
-                     collapse = "")
+    subtitle = paste(
+      c("Day of leave out: ", doy,
+        "; Critical cumulative GDD value: ", gdd_val),
+      collapse = "")
   ) +
   
   theme_bw() +
@@ -404,11 +403,9 @@ ggplot(data = predictions) +
     x = "Observation",
     y = "Prediction",
     title = "Scatterplot: Predicted vs. observed day of leave out",
-    subtitle = paste(c("Regression function: f(x) = ",
-                       a,
-                       "x + ",
-                       b),
-                     collapse = "")
+    subtitle = paste(
+      c("Regression function: f(x) = ", a, "x + ", b),
+      collapse = "")
   ) +
   theme_bw()
 ```
