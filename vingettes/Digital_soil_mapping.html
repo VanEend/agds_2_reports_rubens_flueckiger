@@ -425,7 +425,7 @@ predicting the pH at the top 10cm <code>pH.0.10</code> we will model
 whether the soil is waterlogged at a depth of 100cm
 <code>waterlog.100</code> or not.</p>
 <blockquote>
-<p><strong>NOTE</strong></p>
+<p><strong>Note</strong></p>
 <p>The variable <code>waterlog.100</code> is categorical/binary. It can
 only obtain two values; 1 if it is waterlogged at 100cm depth and 0 if
 not.</p>
@@ -656,7 +656,7 @@ row names from the resulting data frame above.</p>
 <p>We can now apply the same model as in chapter <a href="#model-training">3.2 Model training</a>, however we will limit the
 training set variables to those extracted in chapter <a href="#train-new-model">4.2 Train new model</a>.</p>
 <blockquote>
-<p><strong>NOTE</strong></p>
+<p><strong>Note</strong></p>
 <p>We again need to use the function <code>factor</code> to specify the
 <code>waterlog.100</code> variable as categorical.</p>
 </blockquote>
@@ -848,7 +848,7 @@ we specify how many Cross-Validations we perform (here: 5). With the
 <code>splitrule</code> as variance). To reduce run time of the code, I
 only selected a few values.</p>
 <blockquote>
-<p><strong>NOTE</strong></p>
+<p><strong>Note</strong></p>
 <p><code>caret::train</code> realizes that the outcome variable
 <code>waterlog.100</code> is categorical and hints us towards using the
 <code>factor()</code> function to specify the variable as such. However,
@@ -1154,8 +1154,8 @@ hyperparamter model with probabilistic chance of the soil being
 waterlogged
 </p>
 </div>
-<p>The resulting curve clearly displays a “better than random guess”
-model.</p>
+<p>The resulting curve (solid black line) clearly displays a better than
+“random guess” model, denoted as the dashed line.</p>
 </div>
 <div id="additional-questions" class="section level2">
 <h2>6.3 Additional questions</h2>
