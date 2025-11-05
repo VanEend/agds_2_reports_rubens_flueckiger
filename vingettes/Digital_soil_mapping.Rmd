@@ -36,7 +36,7 @@ Soil Mapping* chapter. However, instead of specially predicting the pH
 at the top 10cm `pH.0.10` we will model whether the soil is waterlogged
 at a depth of 100cm `waterlog.100` or not.
 
-> **NOTE**
+> **Note**
 >
 > The variable `waterlog.100` is categorical/binary. It can only obtain
 > two values; 1 if it is waterlogged at 100cm depth and 0 if not.
@@ -224,7 +224,7 @@ We can now apply the same model as in chapter [3.2 Model training],
 however we will limit the training set variables to those extracted in
 chapter [4.2 Train new model].
 
-> **NOTE**
+> **Note**
 >
 > We again need to use the function `factor` to specify the
 > `waterlog.100` variable as categorical.
@@ -336,7 +336,7 @@ arguments to be tweaked (here: `mtry` and `min.node.size`. I held
 `splitrule` as variance). To reduce run time of the code, I only
 selected a few values.
 
-> **NOTE**
+> **Note**
 >
 > `caret::train` realizes that the outcome variable `waterlog.100` is
 > categorical and hints us towards using the `factor()` function to
@@ -504,7 +504,7 @@ ggplot(data = df_eval_prob, aes(d = waterlog.100, m = pred_1)) +
   theme_bw()
 ```
 
-The resulting curve clearly displays a "better than random guess" model.
+The resulting curve (solid black line) clearly displays a better than "random guess" model, denoted as the dashed line.
 
 ## 6.3 Additional questions
 
