@@ -254,3 +254,58 @@ conf_matrix_optim <- confusionMatrix(
 )
 conf_matrix_optim
 ```
+
+# Probabilistic predictions
+
+## Train probabilistic model
+
+```{r}
+rf_prob <- ranger( 
+  formula = factor(df_train[, target]) ~ ., # target variable
+  data = df_train[, predictors_selected], # Predictor variables
+  mtry = 10, # Given from chapter 5.1
+  min.node.size = 50, # Given from chapter 5.1
+  seed = 42, # Specify the seed for randomization to reproduce the same model again
+  probability = TRUE, # yields a probability to be true
+  num.threads = parallel::detectCores() - 1)
+
+# quick report and performance of trained model object
+rf_prob
+```
+
+## ROC curve
+
+```{r}
+rf_eval_prob <- predict(
+  rf_prob, # RF model
+  data = df_test, # Predictor data
+  num.threads = parallel::detectCores() - 1
+)
+
+# Save predictions to validation df
+df_eval_prob <- data.frame(df_test$waterlog.100)
+df_eval_prob$pred_0 <- rf_eval_prob$predictions[, "0"]
+df_eval_prob$pred_1 <- rf_eval_prob$predictions[, "1"]
+
+# Rename column
+df_eval_prob <- df_eval_prob |>
+  rename("waterlog.100" = "df_test.waterlog.100")
+```
+
+```{r}
+ggplot(data = df_eval_prob, aes(d = waterlog.100, m = pred_1)) +
+  geom_roc(n.cuts = 0, labels = FALSE) + # Add ROC curve & remove label and marker
+  geom_abline( # Random guess line 
+    intercept = 0,
+    slope = 1,
+    linetype = "dashed"
+  ) +
+  labs(
+    x = "False positive fraction",
+    y = "True positive fraction",
+    title = "Reicever-operating-characteristic curve"
+  ) +
+  theme_bw()
+```
+
+## Additional questions
