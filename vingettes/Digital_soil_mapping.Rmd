@@ -7,7 +7,9 @@ output:
     toc: TRUE
 ---
 
-# Packages
+# 1 Packages
+
+To solve the report exercise, the following packages will be needed.
 
 ```{r, message=FALSE, warning=FALSE}
 library(ggplot2)
@@ -18,15 +20,32 @@ library(caret)
 library(plotROC)
 ```
 
-# Load data sets
+# 2 Load data sets
+
+To implement the random forest model we will need the following data
+set.
 
 ```{r}
 df <- readRDS("../data_raw/df_digital_soil_mapping.rds")
 ```
 
-#  Simple model
+# 3 Simple model
 
-## Preprocessing
+In a first step we will re-implement the workflow given in the *Digital
+Soil Mapping* chapter. However, instead of specially predicting the pH
+at the top 10cm `pH.0.10` we will model whether the soil is waterlogged
+at a depth of 100cm `waterlog.100` or not.
+
+> **NOTE**
+>
+> The variable `waterlog.100` is categorical/binary. It can only obtain
+> two values; 1 if it is waterlogged at 100cm depth and 0 if not.
+
+## 3.1 Preprocessing
+
+To simplify the selection of variables needed to perform a *Random
+Forest* modelling we first define the target variable (here:
+`waterlog.100`) and the necessary variables we will apply the model on.
 
 ```{r}
 # Specify target
@@ -36,12 +55,25 @@ target <- "waterlog.100"
 predictors <- names(df)[14:ncol(df)]
 ```
 
+Then we will split the data set into a training set and a test set. As
+the data set already comes with calibration and validation sites, we
+will use the calibration sites as our training data sets and the
+validation sites as our test set. To guarantee no complications while
+performing the Random Forest classification, we will drop all `NA`
+values.
+
 ```{r}
 df_train <- df |> filter(dataset == "calibration") |> drop_na()
 df_test <- df |> filter(dataset == "validation") |> drop_na()
 ```
 
-## Model training
+## 3.2 Model training
+
+Now we can start modelling. Since the target variable (`waterlog.100`)
+is categorical, we will need to specify the character of the vector as
+categorical by using the function `factor()`. In addition we will return
+basic information about the model, such as the out-of-the-bag error OOB,
+which will be useful for the interpretation of the result later on.
 
 ```{r}
 rf_basic <- ranger(
@@ -55,7 +87,10 @@ rf_basic <- ranger(
 rf_basic
 ```
 
-## Model evaluation
+## 3.3 Model evaluation
+
+To evaluate the model, we will apply the generated Random Forest model
+on the test set separated in chapter [3.1 Preprocessing].
 
 ```{r}
 # Predict waterlog.100 on test set
@@ -74,6 +109,12 @@ df_eval <- df_eval |>
   rename("waterlog.100" = "df_test.waterlog.100")
 ```
 
+To analyse the result, we can use the `confusionMatrix()` function of
+the package `caret`. The function creates a confusion matrix (true
+positive, true negative, false positive and false negative values) as
+well as statistical analysis of the categorical data set such as
+Sensitivity, Specificity and Balanced Accuracy values.
+
 ```{r}
 conf_matrix <- confusionMatrix(
   data = df_eval$pred, # Predicted values
@@ -84,6 +125,18 @@ conf_matrix <- confusionMatrix(
 # Quick report of statistical analysis
 conf_matrix
 ```
+
+The model performs rather well. The overall accuracy is at 75.5% and the
+balanced accuracy, which takes imbalance in the data set into account,
+is at 73.57%. However, the Positive Predicted Value (PPV) is about 15%
+larger than the Negative Predicted Value (NPV), which means that the
+model tends to predict waterlogged sites as such better than non
+waterlogged sites.
+
+To analyse whether the test set is balanced or not, we will simply group
+by the waterlogged (1) and not waterlogged (0) cases and summaries them
+by taking the sum. If the test set is balanced, there should be about as
+many waterlogged as not waterlogged cases.
 
 ```{r}
 # Test set
@@ -97,10 +150,28 @@ balance_train <- df_train |>
   summarise(count = n())
 ```
 
+| Waterlogged |        Test set        |      Training set       |
+|-------------|:----------------------:|:-----------------------:|
+| Yes (1)     | `r balance_test[2, 2]` | `r balance_train[2, 2]` |
+| No (0)      | `r balance_test[1, 2]` | `r balance_train[1, 2]` |
 
-# Variable selection
+As one can see, the training and test set are skewed towards not
+waterlogged sites. This has a huge effect on the model performance.
+Assuming we have a data set with 90% containing only 1's and the
+remaining 10% only 0's. This means that if we create a model that always
+predicts 1, we would achieve an accuracy of 90%. This obviously is not
+desired when implementing a model and has to be accounted for.
 
-## Select variables
+# 4 Variable selection
+
+In this chapter, we will select only those variables which yield the
+most importance in explaining the target variable (`waterlog.100`) and
+compare the result with the result given in chapter [3 Simple model].
+
+## 4.1 Select variables
+
+To select the most explaining variables I will use the `Boruta` package.
+In addition I will return the hierarchy of importance of each variable.
 
 ```{r}
 set.seed(42)
@@ -132,13 +203,27 @@ ggplot(data = df_bor, aes(x = reorder(rowname, meanImp),
   coord_flip()
 ```
 
+Given the selection above, we can now create a vector only containing
+the most explaining variables. Hereby we will use the `filter` function
+of `dplyr` package and extract row names from the resulting data frame
+above.
+
 ```{r}
 predictors_selected <- df_bor |> 
   filter(decision == "Confirmed") |> # Filter all variables with "confirmed"
   pull(rowname) # Extract rownames from it
 ```
 
-## Train new model
+## 4.2 Train new model
+
+We can now apply the same model as in chapter [3.2 Model training],
+however we will limit the training set variables to those extracted in
+chapter [4.2 Train new model].
+
+> **NOTE**
+>
+> We again need to use the function `factor` to specify the
+> `waterlog.100` variable as categorical.
 
 ```{r}
 rf_bor <- ranger( 
@@ -151,7 +236,9 @@ rf_bor <- ranger(
 rf_bor
 ```
 
-## Evaluate new model
+## 4.3 Evaluate new model
+
+Now we can repeat the same step as in chapter [3.3 Model evaluation].
 
 ```{r}
 rf_eval_vs <- predict(
@@ -169,6 +256,9 @@ df_eval_vs <- df_eval_vs |>
   rename("waterlog.100" = "df_test.waterlog.100")
 ```
 
+Again we will use the `confusionMatrix()` function to summarise the
+result.
+
 ```{r}
 conf_matrix_vs <- confusionMatrix(
   data = df_eval_vs$pred,
@@ -178,9 +268,34 @@ conf_matrix_vs <- confusionMatrix(
 conf_matrix_vs
 ```
 
-# Model optimization
+| Metric | Simple Model | VS Model |
+|:-----------------|:-------------------------:|:-------------------------:|
+| Sensitivity | `r conf_matrix$byClass[1]` | `r conf_matrix_vs$byClass[1]` |
+| Specificity | `r conf_matrix$byClass[2]` | `r conf_matrix_vs$byClass[2]` |
+| PPV | `r conf_matrix$byClass[3]` | `r conf_matrix_vs$byClass[3]` |
+| NPV | `r conf_matrix$byClass[4]` | `r conf_matrix_vs$byClass[4]` |
+| F1 | `r conf_matrix$byClass[7]` | `r conf_matrix_vs$byClass[7]` |
+| Balanced Accuracy | `r conf_matrix$byClass[11]` | `r conf_matrix_vs$byClass[11]` |
+| OOB | `r rf_basic$prediction.error` | `r rf_bor$prediction.error` |
 
-## Hyperparameter adjustment
+As one can see from the table above, the model with selected variables
+generalizes better given every metric above. Additionally the OOB is
+specified. Since the OOB of the model with selected variables is lower
+than the OOB of the simple model, the model with selected variables
+would still be chosen, as a lower OOB score describes a more accurate
+model.
+
+# 5 Model optimization
+
+The aim of this chapter is to improve the initial simple model by tweaking the hyperparamteres `mtry` and `min.node.size` with the help of the `caret` package.
+
+## 5.1 Hyperparameter adjustment
+
+Finally we want to optimize the model by tweaking the `mtry` and
+`min.node.size` parameters of the `ranger` model function. Hereby we
+will use the `caret` package. In a first step however, we need to
+specify all dependent variables on our target variables and convert that
+into a `caret` readable format with the `formula()` function.
 
 ```{r}
 # Create string with all variables
@@ -192,6 +307,23 @@ fun_pred <- paste(
 # Convert into a caret-readable string
 fun_pred <- formula(fun_pred)
 ```
+
+Now we can use the `train` function of `caret` to model the the function
+over the training data set. with the `trainControl()` function we can
+specify how we want to tweak the hyperparameters. Here we select cv;
+Cross-Validation and with number we specify how many Cross-Validations
+we perform (here: 5). With the `tuneGrid` input we can specify the
+arguments to be tweaked (here: `mtry` and `min.node.size`. I held
+`splitrule` as variance). To reduce run time of the code, I only
+selected a few values.
+
+> **NOTE**
+>
+> `caret::train` realizes that the outcome variable `waterlog.100` is
+> categorical and hints us towards using the `factor()` function to
+> specify the variable as such. However, since `caret::train` already
+> realized that `waterlog.100` is categorical, it is not necessary to
+> specify it again. Thereby we can simply ignore the warning message.
 
 ```{r}
 mod_cv <- train(
@@ -213,7 +345,16 @@ mod_cv <- train(
 mod_cv
 ```
 
-## Train optimized model
+The resulting optimal values for the hyperparamters are:
+
+-   `mtry`: 10
+-   `min.node.size`: 50
+
+## 5.2 Train optimized model
+
+To train the new model we simply repeat the step as in chapters [3.2
+Model training] and [4.2 Train new model] and add `mtry` and
+`min.node.size` values from chapter [5.1 Hyperparameter adjustment].
 
 ```{r}
 rf_optim <- ranger( 
@@ -228,7 +369,10 @@ rf_optim <- ranger(
 rf_optim
 ```
 
-## Evaluate optimized model
+## 5.3 Evaluate optimized model
+
+To evaluate the optimized model we can repeat the process from chapter
+[3.3 Model evaluation] or [4.3 Evaluate new model].
 
 ```{r}
 rf_eval_optim <- predict(
@@ -246,6 +390,9 @@ df_eval_optim <- df_eval_optim |>
   rename("waterlog.100" = "df_test.waterlog.100")
 ```
 
+Again we will use the `confusionMatrix()` function to summarise the
+result.
+
 ```{r}
 conf_matrix_optim <- confusionMatrix(
   data = df_eval_optim$pred,
@@ -255,9 +402,29 @@ conf_matrix_optim <- confusionMatrix(
 conf_matrix_optim
 ```
 
-# Probabilistic predictions
+| Metric | Simple Model | VS Model | Optimal Model |
+|:--------------|:--------------------:|:--------------------:|:-------------:|
+| Sensitivity | `r conf_matrix$byClass[1]` | `r conf_matrix_vs$byClass[1]` | `r conf_matrix_optim$byClass[1]` |
+| Specificity | `r conf_matrix$byClass[2]` | `r conf_matrix_vs$byClass[2]` | `r conf_matrix_optim$byClass[2]` |
+| PPV | `r conf_matrix$byClass[3]` | `r conf_matrix_vs$byClass[3]` | `r conf_matrix_optim$byClass[3]` |
+| NPV | `r conf_matrix$byClass[4]` | `r conf_matrix_vs$byClass[4]` | `r conf_matrix_optim$byClass[4]` |
+| F1 | `r conf_matrix$byClass[7]` | `r conf_matrix_vs$byClass[7]` | `r conf_matrix_optim$byClass[7]` |
+| Balanced Accuracy | `r conf_matrix$byClass[11]` | `r conf_matrix_vs$byClass[11]` | `r conf_matrix_optim$byClass[11]` |
+| OOB | `r rf_basic$prediction.error` | `r rf_bor$prediction.error` | `r rf_optim$prediction.error` |
 
-## Train probabilistic model
+Each metric displayed in the table above is about as large as the
+metrics of the variable selection model (VS Model) and larger than the
+metric in the initial model. Therefore, the new, optimized model
+generalizes better than the initial, simple model.
+
+# 6 Probabilistic predictions
+
+The aim of this chapter is to create a Reicever-operating-characteristic (ROC) curve given a probailistical prediction of a soil being waterlogged.
+
+## 6.1 Train probabilistic model
+
+To model if a soil is waterlogged probabilisticaly, we can apply the
+same model as in chapter [5.2 Train optimized model] and add the `probability = TRUE` statement to the `ranger()` function. 
 
 ```{r}
 rf_prob <- ranger( 
@@ -273,7 +440,9 @@ rf_prob <- ranger(
 rf_prob
 ```
 
-## ROC curve
+## 6.2 ROC curve
+
+To create the ROC curve we need to apply the model onto the test set. The resulting data will now no longer be in a binary form but in a continuous form, where the values range from zero to one and representing the probability for a soil to be 0 (or not waterlogged) or 1 (or waterlogged). Note that the sum of both always must equal 1.
 
 ```{r}
 rf_eval_prob <- predict(
@@ -292,6 +461,8 @@ df_eval_prob <- df_eval_prob |>
   rename("waterlog.100" = "df_test.waterlog.100")
 ```
 
+To create the ROC curve we will now only consider the probability of a soil to be waterlogged. To display the ROC curve we will use the `plotROC` package. This will enable the `geom_roc()` function in `ggplot2`. To create the ROC curve, we will use the observed variable `waterlog.100` of the evaluation data frame as the disease variable (denoted as d in the `aes()` argument in `ggplot2`) and the probability of being waterlogged (I named it pred_1 in the evaluation data frame)  as the marker variable (denoted as m in the `aes()` argument in `ggplot2`).
+
 ```{r}
 ggplot(data = df_eval_prob, aes(d = waterlog.100, m = pred_1)) +
   geom_roc(n.cuts = 0, labels = FALSE) + # Add ROC curve & remove label and marker
@@ -308,4 +479,10 @@ ggplot(data = df_eval_prob, aes(d = waterlog.100, m = pred_1)) +
   theme_bw()
 ```
 
-## Additional questions
+The resulting curve clearly displays a "better than random guess" model.
+
+## 6.3 Additional questions
+
+The threshold value chosen to determine whether a soil should be attributed to a waterlogged soil or not can be used to limit false predictions. Assuming we will use the probability of a soil being waterlogged, lowering the threshold means a less strict attribution which leads to more falsely waterlogged-attributed soils. Therefore, lowering the threshold leads to a higher risk of type 2 errors. On the other hand increasing the threshold means a more strict attribution which leads to more falsely not-waterlogged attributed soils. This leads to more type 1 errors. In the case of retaining building integrity by making sure that the soil is not waterlogged, it therefore would be advisable to increase the threshold value. For building sites, were waterlogged soils are unwanted but not critical, the threshold values can be lowered since the prime not waterlogged sites may already be reserved or taken by critical infrastructures, which must be build in non-waterlogged sites. However, the threshold value for unwanted waterlogged sites is highly variable and strongly depends on the wish of the builder.
+
+A similar-natured problem arises in remote sensing. When measuring the sea ice extend in polar regions a pixel usually contains both sea ice and water. Since water has a much lower albedo compared to ice, this drastically affects the resulting reflectance of a specific band (and its polarization) used to determine the extend and hence returning us a percentage of ice-covered water (using the NASA algorithm for instant). When determining the actual extend of the sea ice at a certain time we would need a threshold value of sea ice covered water for which we would attribute a pixel to be sea ice covered or not.
