@@ -39,3 +39,60 @@ predictors <- names(df)[14:ncol(df)]
 df_train <- df |> filter(dataset == "calibration") |> drop_na()
 df_test <- df |> filter(dataset == "validation") |> drop_na()
 ```
+
+## Model training
+
+```{r}
+rf_basic <- ranger(
+  formula = factor(df_train[, target]) ~ ., # Model formula
+  data = df_train[, predictors], # Target variable
+  seed = 42,  # Seed for randomization to reproduce the same model
+  num.threads = parallel::detectCores() - 1 # Use all but 1 CPU core for quick model training
+)
+
+# quick report and performance of trained model object
+rf_basic
+```
+
+## Model evaluation
+
+```{r}
+# Predict waterlog.100 on test set
+rf_eval <- predict(
+  rf_basic, # Model
+  data = df_test, # test set
+  num.threads = parallel::detectCores() - 1
+)
+
+# Save predictions to validation df
+df_eval <- data.frame(df_test$waterlog.100) # Observed
+df_eval$pred <- rf_eval$predictions # Predicted
+
+# Rename column
+df_eval <- df_eval |>
+  rename("waterlog.100" = "df_test.waterlog.100")
+```
+
+```{r}
+conf_matrix <- confusionMatrix(
+  data = df_eval$pred, # Predicted values
+  reference = as.factor(df_eval$waterlog.100), # Observed values
+  dnn = c("Predicted", "Observed") # Axis names of confusion matrix
+)
+
+# Quick report of statistical analysis
+conf_matrix
+```
+
+```{r}
+# Test set
+balance_test <- df_eval |>
+  group_by(waterlog.100) |> # Group by observations
+  summarise(count = n()) # Count all 0's and 1's
+
+# Training set
+balance_train <- df_train |>
+  group_by(waterlog.100) |> # Group by waterlog.100
+  summarise(count = n())
+```
+
