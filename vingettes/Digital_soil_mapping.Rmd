@@ -142,18 +142,22 @@ many waterlogged as not waterlogged cases.
 # Test set
 balance_test <- df_eval |>
   group_by(waterlog.100) |> # Group by observations
-  summarise(count = n()) # Count all 0's and 1's
+  summarise(count_test = n()) # Count all 0's and 1's
 
 # Training set
 balance_train <- df_train |>
   group_by(waterlog.100) |> # Group by waterlog.100
-  summarise(count = n())
-```
+  summarise(count_train = n())
 
-| Waterlogged |        Test set        |      Training set       |
-|-------------|:----------------------:|:-----------------------:|
-| Yes (1)     | `r balance_test[2, 2]` | `r balance_train[2, 2]` |
-| No (0)      | `r balance_test[1, 2]` | `r balance_train[1, 2]` |
+# Generate table for visualisation
+balance <- merge(balance_test, balance_train, by = "waterlog.100")
+knitr::kable(
+  balance, # df
+  align = "lcc", # Align columns
+  caption = "Table 1: Number of observations being waterlogged (1) or not waterlogged (0) for the test and training set", # Table name
+  col.names = c("Waterlogged", "Amount in test set", "Amount in training set") # Column names
+)
+```
 
 As one can see, the training and test set are skewed towards not
 waterlogged sites. This has a huge effect on the model performance.
@@ -173,7 +177,7 @@ compare the result with the result given in chapter [3 Simple model].
 To select the most explaining variables I will use the `Boruta` package.
 In addition I will return the hierarchy of importance of each variable.
 
-```{r}
+```{r, fig.align='center', fig.height=18, fig.cap="Figure 1: Variable selection based on the Boruta package"}
 set.seed(42)
 
 # run the algorithm
@@ -266,18 +270,33 @@ conf_matrix_vs <- confusionMatrix(
   dnn = c("Predicted", "Observed")
 )
 conf_matrix_vs
+
+# Create table for visualisation
+metric <- c("Sensitivity", "Specificity", "PPV", "NPV", "F1", "Balanced Accuracy", "OOB")
+df_metric <- data.frame(metric)
+
+simple_model <- c( # Metrics of simple model
+  round(conf_matrix$byClass[c(1:4, 7, 11)], 4), # Everything but OOB
+  round(rf_basic$prediction.error, 4) # OOB
+)
+
+vs_model <- c( # Metrics of variable selection model
+  round(conf_matrix_vs$byClass[c(1:4, 7, 11)], 4), # Everything but OOB
+  round(rf_bor$prediction.error, 4) # OOB
+)
+
+# Add metrics to df
+df_metric[, "simple_model"] <- simple_model # Add simple model 
+df_metric[, "vs_model"] <- vs_model # Add vs model
+
+# Create table with knitr::kable
+knitr::kable(
+  df_metric, # df
+  align = "lcc", # align columns
+  caption = "Table 2: Compareing statistics of the simple model created in chapter 3 and the variable selection (VS) model in this chapter", # Table name
+  col.names = c("Metric", "Simple Model", "VS Model") # column names
+)
 ```
-
-| Metric | Simple Model | VS Model |
-|:-----------------|:-------------------------:|:-------------------------:|
-| Sensitivity | `r conf_matrix$byClass[1]` | `r conf_matrix_vs$byClass[1]` |
-| Specificity | `r conf_matrix$byClass[2]` | `r conf_matrix_vs$byClass[2]` |
-| PPV | `r conf_matrix$byClass[3]` | `r conf_matrix_vs$byClass[3]` |
-| NPV | `r conf_matrix$byClass[4]` | `r conf_matrix_vs$byClass[4]` |
-| F1 | `r conf_matrix$byClass[7]` | `r conf_matrix_vs$byClass[7]` |
-| Balanced Accuracy | `r conf_matrix$byClass[11]` | `r conf_matrix_vs$byClass[11]` |
-| OOB | `r rf_basic$prediction.error` | `r rf_bor$prediction.error` |
-
 As one can see from the table above, the model with selected variables
 generalizes better given every metric above. Additionally the OOB is
 specified. Since the OOB of the model with selected variables is lower
@@ -325,7 +344,7 @@ selected a few values.
 > realized that `waterlog.100` is categorical, it is not necessary to
 > specify it again. Thereby we can simply ignore the warning message.
 
-```{r}
+```{r, warning=FALSE}
 mod_cv <- train(
   fun_pred, # Model function
   data = df_train, # training set
@@ -400,17 +419,23 @@ conf_matrix_optim <- confusionMatrix(
   dnn = c("Predicted", "Observed")
 )
 conf_matrix_optim
-```
 
-| Metric | Simple Model | VS Model | Optimal Model |
-|:--------------|:--------------------:|:--------------------:|:-------------:|
-| Sensitivity | `r conf_matrix$byClass[1]` | `r conf_matrix_vs$byClass[1]` | `r conf_matrix_optim$byClass[1]` |
-| Specificity | `r conf_matrix$byClass[2]` | `r conf_matrix_vs$byClass[2]` | `r conf_matrix_optim$byClass[2]` |
-| PPV | `r conf_matrix$byClass[3]` | `r conf_matrix_vs$byClass[3]` | `r conf_matrix_optim$byClass[3]` |
-| NPV | `r conf_matrix$byClass[4]` | `r conf_matrix_vs$byClass[4]` | `r conf_matrix_optim$byClass[4]` |
-| F1 | `r conf_matrix$byClass[7]` | `r conf_matrix_vs$byClass[7]` | `r conf_matrix_optim$byClass[7]` |
-| Balanced Accuracy | `r conf_matrix$byClass[11]` | `r conf_matrix_vs$byClass[11]` | `r conf_matrix_optim$byClass[11]` |
-| OOB | `r rf_basic$prediction.error` | `r rf_bor$prediction.error` | `r rf_optim$prediction.error` |
+optim_model <- c( # Metrics of optimized model
+  round(conf_matrix_optim$byClass[c(1:4, 7, 11)], 4), # Everything but OOB
+  round(rf_optim$prediction.error, 4) # OOB
+)
+
+# Add metrics to df
+df_metric[, "optimized_model"] <- optim_model # Add optimized model
+
+# Create table with knitr::kable
+knitr::kable(
+  df_metric, # df
+  align = "lccc", # align columns
+  caption = "Table 3: Compareing statistics of the simple model created in chapter 3, the variable selection (VS) model in chapter 4 and the optimized hyperparameter model in this chapter", # Table name
+  col.names = c("Metric", "Simple Model", "VS Model", "Optimized Model") # column names
+)
+```
 
 Each metric displayed in the table above is about as large as the
 metrics of the variable selection model (VS Model) and larger than the
@@ -463,7 +488,7 @@ df_eval_prob <- df_eval_prob |>
 
 To create the ROC curve we will now only consider the probability of a soil to be waterlogged. To display the ROC curve we will use the `plotROC` package. This will enable the `geom_roc()` function in `ggplot2`. To create the ROC curve, we will use the observed variable `waterlog.100` of the evaluation data frame as the disease variable (denoted as d in the `aes()` argument in `ggplot2`) and the probability of being waterlogged (I named it pred_1 in the evaluation data frame)  as the marker variable (denoted as m in the `aes()` argument in `ggplot2`).
 
-```{r}
+```{r, fig.align='center', fig.cap="Figure 2: Reicever-operating-characteristic (ROC) curve of the optimized hyperparamter model with probabilistic chance of the soil being waterlogged"}
 ggplot(data = df_eval_prob, aes(d = waterlog.100, m = pred_1)) +
   geom_roc(n.cuts = 0, labels = FALSE) + # Add ROC curve & remove label and marker
   geom_abline( # Random guess line 
