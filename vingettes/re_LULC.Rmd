@@ -1,0 +1,61 @@
+---
+title: "re_LULC"
+author: "Flueckiger_Rubens"
+date: "2025-11-11"
+output: 
+  html_document:
+    toc: TRUE
+---
+
+# Packages
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(parsnip)
+library(workflows)
+library(tune)
+library(dials)
+library(rsample)
+```
+
+# Load df's
+Load dataset from website and safe it in folder
+
+```{r}
+if(FALSE){
+  # see here how to directly load train and test data from Zenodo
+  download.file(
+    url = "https://zenodo.org/records/8298491/files/test_data.rds?download=1",     
+    destfile = file.path("../data_raw/", "test_data.rds"))
+  download.file(
+    url = "https://zenodo.org/records/8298491/files/training_data.rds?download=1", 
+    destfile = file.path("../data_raw/", "training_data.rds"))
+}
+
+```
+
+Note: If it does not work files can be downloaded here: <https://zenodo.org/records/8298491>
+
+Load data set from folder
+
+```{r}
+
+test_data_Zenodo <- readr::read_rds(
+  file.path("../data_raw/", "test_data.rds"))
+training_data_Zenodo <- readr::read_rds(
+  file.path("../data_raw/", "training_data.rds"))
+
+# ensure training and test data contain same predictor/feature variables
+setdiff(names(training_data_Zenodo), 
+        names(test_data_Zenodo)) # pixelID, LC1, lat, lon
+setdiff(names(test_data_Zenodo),     
+        names(training_data_Zenodo))
+
+train <- training_data_Zenodo |> 
+  select(-c(pixelID, lat, lon)) # remove ID, lat, lon
+test  <- test_data_Zenodo                                           
+# NOTE: for the competition, column 'LC1' was removed from the 
+#       test data
+```
+
