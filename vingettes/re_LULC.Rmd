@@ -7,9 +7,15 @@ output:
     toc: TRUE
 ---
 
-# Packages
+# 1 Introduction
 
-```{r}
+Improving the supervised classification model given in the tutorial in the AGDS2 book can be done in several ways. First, the tutorial used a boosted tree approach to attribute an observation to a class. However, one might change this approach to achieve a better result or to reduce run time. One of such approaches could be a KNN-clustering. KNN has the benefit as it classifies a data point according to its distant to neighbouring data points, therefore only uses one variable; the amount of neighbours to consider. However, since KNN is dependent on a data set with as few missing values present as possible, I decided to stick with the boosted tree classifier. Second, since we will use the boosted tree classifier like in the tutorial, we can add additional hyperparameters to improve the model. In this report exercise I decided to add the learn rate, which controls how much a model's parameter is adjusted during each training step to minimize error. A low learn rate benefits from a more stable convergence but can make the training very slow. A high learn rate makes the training fast but might miss the optimal solution. Third, we can adjust the number of models generated to extract the optimal solution. This can be done by adjusting the size of the latin hypercube sampling grid and the size of the cross-validation. In the tutorial the size of the latin hypercube grid was 3 and the model used a 3-fold cross-validation to determine the best result. The model will therefore fit 9 models (for every fold in the cross-validation 3 models). I will increase the latin hypercube size to 5 and consider 5 cross-validation folds. This will increase the amount of fitting models to 25 (5 models for every cross-validation fold), thereby increasing the chance of finding the ideal hyperparameter values. Lastly, one can change the metric to retrieve the best model. Different metrics might lead to different resulting outputs and thereby changing the performance of the final model. `tune::select_best()` offers a wide range of different metrics (a list of different options can be seen [here](https://yardstick.tidymodels.org/articles/metric-types.html)). However, I decided to stick with the *area under the ROC curve (`roc_auc`)*.
+
+In the following chapters I will implement the changes I described above.
+
+# 2 Packages
+
+```{r, warning=FALSE, message=FALSE}
 library(tidyr)
 library(dplyr)
 library(parsnip)
@@ -19,28 +25,31 @@ library(dials)
 library(rsample)
 ```
 
-# Load df's
-Load dataset from website and safe it in folder
+# 3 Load training and test set
+
+In a first step we will load the training and test set from the Zenodo website and store them into the local folder for faster access. Since this process shall not be repeated again, it is enclosed inside a `if(FALSE){}` statement.
+
+> **Note**
+>
+> If the download does not work, the files can be downloaded [here](https://zenodo.org/records/8298491)
 
 ```{r}
 if(FALSE){
-  # see here how to directly load train and test data from Zenodo
+  # Test set
   download.file(
     url = "https://zenodo.org/records/8298491/files/test_data.rds?download=1",     
     destfile = file.path("../data_raw/", "test_data.rds"))
+  
+  # Training set
   download.file(
     url = "https://zenodo.org/records/8298491/files/training_data.rds?download=1", 
     destfile = file.path("../data_raw/", "training_data.rds"))
 }
-
 ```
 
-Note: If it does not work files can be downloaded here: <https://zenodo.org/records/8298491>
+Finally, we can load the dataset from the local folder. In the same step we will ensure that the training and test set contain the same predictors and feature variables.
 
-Load data set from folder
-
-```{r}
-
+```{r, results='hide'}
 test_data_Zenodo <- readr::read_rds(
   file.path("../data_raw/", "test_data.rds"))
 training_data_Zenodo <- readr::read_rds(
@@ -49,32 +58,26 @@ training_data_Zenodo <- readr::read_rds(
 # ensure training and test data contain same predictor/feature variables
 setdiff(names(training_data_Zenodo), 
         names(test_data_Zenodo)) # pixelID, LC1, lat, lon
-setdiff(names(test_data_Zenodo),     
+setdiff(names(test_data_Zenodo),
         names(training_data_Zenodo))
 
 train <- training_data_Zenodo |> 
   select(-c(pixelID, lat, lon)) # remove ID, lat, lon
-test  <- test_data_Zenodo                                           
-# NOTE: for the competition, column 'LC1' was removed from the 
-#       test data
+test  <- test_data_Zenodo
 ```
 
-set seed for reproduceability
+# 4 Model improvements
+
+Now we can start to improve the model given in the tutorial. Since the parameter tuning as well as the model fitting step can take a long while, we will store the results in a folder such that we do not need to re-run the same lengthy operation a second time. Since the latin hypercube sampling is a random selection operation step and I want to ensure reproduceability, I will set a seed before starting to improve the model.
 
 ```{r}
+# Set seed for reproduceability
 set.seed(1)
 ```
 
-# Imporvements
+## 4.1 Create model
 
-## Ideas
-
-1.  KNN
-2.  Hyperparameters
-3.  # Models (by: Crossvalidation, Hypercube adjustment thingy)
-4.  LOESS for selecting best model
-
-## Create model
+In a first step we will specify the model used to classify the landcover given the training data set. We will use the `boost_tree()` method inside the `parsnip` package and adjust the `min_n()` and `tree_depth()` parameters as in the tutorial as well as the `learn_rate()` to improve the model (as stated in the [1 Introduction] chapter).
 
 ```{r}
 model_settings <- parsnip::boost_tree(
@@ -84,43 +87,51 @@ model_settings <- parsnip::boost_tree(
   tree_depth = tune(),
   learn_rate = tune()
 ) |>
-  set_mode("classification")
+  set_mode("classification") # Model is used to classify
 
 ```
 
-Workflow
+To tune the parameters we first need to set the target variable and the predictors which the model shall use to predict the variable. We will use the `workflow()` function of the `workflows` package to do so. The final workflow will be printed out for inspection.
 
 ```{r}
 xgb_workflow <- workflows::workflow() |>
-  add_formula(as.factor(LC1) ~ .) |>
-  add_model(model_settings)
+  add_formula(as.factor(LC1) ~ .) |> # set target variable and predictors
+  add_model(model_settings) # Set hyperparameters to tweak
 
+# Show resulting workflow
 print(xgb_workflow)
 ```
 
-## Hypercube
+## 4.2 Latin Hypercube Sampling
+
+Next we can start to configure the hyperparamters (`min_n()`, `tree_depth()` and `learn_rate()`) for the hyperparameter tuning. As already stated in the [4 Model improvements] chapter, this step leads to random results. To ensure reproduceability, we absolutely must set a seed prior, otherwise the results will differ from one run to another. To perform the latin hypercube, I will use the `grid_space_filling()` function inside the `dials` package.
 
 ```{r}
 hp_settings <- dials::grid_space_filling(
-  tune::extract_parameter_set_dials(xgb_workflow),
-  size = 5,
-  type = "latin_hypercube"
+  tune::extract_parameter_set_dials(xgb_workflow), # Extract tuning parameters
+  size = 5, # Number of rows
+  type = "latin_hypercube" # Method = latin hypercube
 )
 
 print(hp_settings)
 ```
 
-## Parameter tuning
+## 4.3 Parameter tuning
 
-note: Duration is long (I needed ~ 7h). So... store result as RDS format in folder
-note: seed for reproduceability needed
+Now we can start to tune the parameters. To do so, we will use the `tune_grid()` function of the `tune` package. To include a cross validation, we `tune_grid()` necessitates a specific format of data frame, wich the function `vfold_cv()` of the package `rsample` offers. We will use the workflow generated in the [4.1 Create model] chapter as the input training data and the hyperparamter grid generated in the [4.2 Latin Hypercube Sampling] chapter as the *hyperparamters to consider* values.
+
+> **Note**
+>
+> This processing step takes a while (it took me about 7 hours). I therefore opted to save the result inside the *model_data* folder such that one does not need to re-run this step.
+>
+> Furthermore, the control parameter of the function includes the statement *verbose = TRUE*. This statement is not necessarily needed. However, it returns information's about the current execution state of the model (e.g. *Fold1: preprocessor 1/1 model 3/5*) which is handy to know whether the program got stuck or if it takes just a while to process a model.
 
 ```{r}
 if(FALSE){
   xgb_results <- tune::tune_grid(
-    xgb_workflow,
-    resamples = vfold_cv(data = train, v = 5),
-    grid = hp_settings,
+    xgb_workflow, # Target & predictors
+    resamples = vfold_cv(data = train, v = 5), # Cross validation folds
+    grid = hp_settings, # tuning parameters to consider
     control = tune::control_grid(
       save_pred = TRUE, # Save pred. statistics
       verbose = TRUE # Show progress while running
@@ -132,31 +143,33 @@ if(FALSE){
 }
 ```
 
-## Select best model
-
-Load result from folder, select best according to LOESS, finalize workflow
+Sine the parameter tuning step will return 25 models (5 folds each containing 5 grid values) including its predicted statistics, we now need to select the best grid values. This can be done with the `select_best()` function of the `tune` package. As stated in the [1 Introduction] chapter, I will let the metric on which to decide the best performing model identical to the tutorial (`roc_auc`; the area under the ROC-curve).
 
 ```{r}
+# Load tuned parameters data set
 xgb_results <- readr::read_rds(
   file.path("../model_data/", "xgb_result")
 )
 
+# Select best model according to metric
 xgb_best <- tune::select_best(
   xgb_results,
-  metric = "roc_auc"
+  metric = "roc_auc" # Metric: Area under ROC-curve
 )
 
+# Finalize workflow
 xgb_best_hp <- tune::finalize_workflow(
   xgb_workflow,
   xgb_best
 )
 
+# Show result
 print(xgb_best_hp)
 ```
 
-## Fit
+## 4.4 Fit and predict
 
-Again save output since running takes for ever
+With the given best model from the [4.3 Parameter tuning] chapter, we can now fit a model on the training data. This step takes again very long to execute, hence I saved the output model inside the *model_data* folder.
 
 ```{r}
 if(FALSE){
@@ -168,23 +181,22 @@ if(FALSE){
 }
 ```
 
-Load data set
+Finally we can predict the landcover class of the test set with the fitted model above.
 
 ```{r}
+# Load fitted model
 xgb_best_model <- readr::read_rds(
   file.path("../model_data/", "xgb_best_model")
 )
-```
 
-predict result
-
-```{r}
+# Predict result on test set
 test_results <- predict(xgb_best_model, test)
 ```
 
-Save the results for the leaderboard
+Since the actual landcover class was removed from the test set for the competition, we cannot further analyse the model performance. However, one can say that *optimizing a model* should not only take the results of the model into account but also the run time. In this case optimizing the model by including more hyperparameters to adjust and adding more models to choose the best out of from significantly increased the total run time of the code (all in all it took me about 7.5 hours). This certainly raises the question whether if a only slightly worse performing model, which only takes half the time (or even less) to compute, should be taken in favor of the *better* performing model.
 
-```{r}
+```{r, echo=FALSE}
+#Save resulting class as CSV for competition
 readr::write_csv(
   x = dplyr::rename(test_results,
                     lulc_class = .pred_class),
