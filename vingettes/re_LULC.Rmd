@@ -15,7 +15,7 @@ In the following chapters I will implement the changes I described above.
 
 # 2 Packages
 
-```{r, warning=FALSE, message=FALSE}
+```{r packages, warning=FALSE, message=FALSE}
 library(tidyr)
 library(dplyr)
 library(parsnip)
@@ -33,7 +33,7 @@ In a first step we will load the training and test set from the Zenodo website a
 >
 > If the download does not work, the files can be downloaded [here](https://zenodo.org/records/8298491)
 
-```{r}
+```{r internet files}
 if(FALSE){
   # Test set
   download.file(
@@ -49,7 +49,7 @@ if(FALSE){
 
 Finally, we can load the dataset from the local folder. In the same step we will ensure that the training and test set contain the same predictors and feature variables.
 
-```{r, results='hide'}
+```{r load files, results='hide'}
 test_data_Zenodo <- readr::read_rds(
   file.path("../data_raw/", "test_data.rds"))
 training_data_Zenodo <- readr::read_rds(
@@ -70,7 +70,7 @@ test  <- test_data_Zenodo
 
 Now we can start to improve the model given in the tutorial. Since the parameter tuning as well as the model fitting step can take a long while, we will store the results in a folder such that we do not need to re-run the same lengthy operation a second time. Since the latin hypercube sampling is a random selection operation step and I want to ensure reproduceability, I will set a seed before starting to improve the model.
 
-```{r}
+```{r seed}
 # Set seed for reproduceability
 set.seed(1)
 ```
@@ -79,7 +79,7 @@ set.seed(1)
 
 In a first step we will specify the model used to classify the landcover given the training data set. We will use the `boost_tree()` method inside the `parsnip` package and adjust the `min_n()` and `tree_depth()` parameters as in the tutorial as well as the `learn_rate()` to improve the model (as stated in the [1 Introduction] chapter).
 
-```{r}
+```{r model settings}
 model_settings <- parsnip::boost_tree(
   engine = "xgboost",
   trees = 50,
@@ -93,7 +93,7 @@ model_settings <- parsnip::boost_tree(
 
 To tune the parameters we first need to set the target variable and the predictors which the model shall use to predict the variable. We will use the `workflow()` function of the `workflows` package to do so. The final workflow will be printed out for inspection.
 
-```{r}
+```{r workflow}
 xgb_workflow <- workflows::workflow() |>
   add_formula(as.factor(LC1) ~ .) |> # set target variable and predictors
   add_model(model_settings) # Set hyperparameters to tweak
@@ -106,7 +106,7 @@ print(xgb_workflow)
 
 Next we can start to configure the hyperparamters (`min_n()`, `tree_depth()` and `learn_rate()`) for the hyperparameter tuning. As already stated in the [4 Model improvements] chapter, this step leads to random results. To ensure reproduceability, we absolutely must set a seed prior, otherwise the results will differ from one run to another. To perform the latin hypercube, I will use the `grid_space_filling()` function inside the `dials` package.
 
-```{r}
+```{r model grid}
 hp_settings <- dials::grid_space_filling(
   tune::extract_parameter_set_dials(xgb_workflow), # Extract tuning parameters
   size = 5, # Number of rows
@@ -126,7 +126,7 @@ Now we can start to tune the parameters. To do so, we will use the `tune_grid()`
 >
 > Furthermore, the control parameter of the function includes the statement *verbose = TRUE*. This statement is not necessarily needed. However, it returns information's about the current execution state of the model (e.g. *Fold1: preprocessor 1/1 model 3/5*) which is handy to know whether the program got stuck or if it takes just a while to process a model.
 
-```{r}
+```{r tuning}
 if(FALSE){
   xgb_results <- tune::tune_grid(
     xgb_workflow, # Target & predictors
@@ -145,7 +145,7 @@ if(FALSE){
 
 Sine the parameter tuning step will return 25 models (5 folds each containing 5 grid values) including its predicted statistics, we now need to select the best grid values. This can be done with the `select_best()` function of the `tune` package. As stated in the [1 Introduction] chapter, I will let the metric on which to decide the best performing model identical to the tutorial (`roc_auc`; the area under the ROC-curve).
 
-```{r}
+```{r best result}
 # Load tuned parameters data set
 xgb_results <- readr::read_rds(
   file.path("../model_data/", "xgb_result")
@@ -171,7 +171,7 @@ print(xgb_best_hp)
 
 With the given best model from the [4.3 Parameter tuning] chapter, we can now fit a model on the training data. This step takes again very long to execute, hence I saved the output model inside the *model_data* folder.
 
-```{r}
+```{r fit}
 if(FALSE){
   # Fit best model
   xgb_best_model <- fit(xgb_best_hp, train)
@@ -183,7 +183,7 @@ if(FALSE){
 
 Finally we can predict the landcover class of the test set with the fitted model above.
 
-```{r}
+```{r predict}
 # Load fitted model
 xgb_best_model <- readr::read_rds(
   file.path("../model_data/", "xgb_best_model")
@@ -195,7 +195,7 @@ test_results <- predict(xgb_best_model, test)
 
 Since the actual landcover class was removed from the test set for the competition, we cannot further analyse the model performance. However, one can say that *optimizing a model* should not only take the results of the model into account but also the run time. In this case optimizing the model by including more hyperparameters to adjust and adding more models to choose the best out of from significantly increased the total run time of the code (all in all it took me about 7.5 hours). This certainly raises the question whether if a only slightly worse performing model, which only takes half the time (or even less) to compute, should be taken in favor of the *better* performing model.
 
-```{r, echo=FALSE}
+```{r csv, echo=FALSE}
 #Save resulting class as CSV for competition
 readr::write_csv(
   x = dplyr::rename(test_results,
