@@ -25,7 +25,7 @@ In the following chapters I will implement the GDD function and the RMSE to MAE 
 
 To reduce the length of this file I saved functions created for this exercise into a separate R file which I will load in with all necessary packages used.
 
-```{r, warning=FALSE, message=FALSE}
+```{r packages, warning=FALSE, message=FALSE}
 library(phenocamr)
 library(appeears)
 library(sf)
@@ -43,7 +43,7 @@ To determine the optimal hyperparamteres of the GDD function, we will need a ref
 
 In a first step we will acquire the Phenocam data set of the Harvard data set. To improve the loading speed I saved the data set into the *data_raw* folder and used a if(FALSE) string to prevent the code to re-upload the data set from the Phenocam server.
 
-```{r}
+```{r phenocam data}
 #Phenocam data
 if(FALSE){ #Prevents re-load
   download_phenocam(
@@ -60,7 +60,7 @@ if(FALSE){ #Prevents re-load
 
 Afterwards we can simply load in the necessary data sets. The first data set (1.) contains the temperature information and the second (2.) information about leave out dates.
 
-```{r}
+```{r load data}
 # 1. Temperature information
 harvard_data <- read.table(
   "../data_raw/harvard_DB_1000_3day.csv",
@@ -79,7 +79,7 @@ Then we can start to preprocess the data set. First we will rename the minimal a
 
 For the data set containing the day of leave out information we first filter for *rising* (meaning leave grow condition) and *gcc_90* (meaning a Green Chromatic Coordinate (GCC) value of at least 90%) to ensure only leave out dates of leave grow and a threshold of at least 90% of plants that leaved-out. Afterwards we convert the doy and year format to a only year and only doy format and select only variables of year, doy, date of leave out and GCC value.
 
-```{r}
+```{r preprocess}
 # Adjust temperature data set
 harvard_data <- harvard_data |>
   mutate(
@@ -125,7 +125,7 @@ To acquire the NASA raster data MCD12Q2 and DAYMET we will repeat the same proce
 
 First we will acquire the MCD12Q2 data set. I used the if(FALSE) statement again to prevent a re-acquire of the data set, since I stored the needed files in the *data_raw* folder. As I encountered some difficulties to plot the MCD12Q2 file on a netcdf4 format, I decided to store the the file in a geotiff format. Since both formats work with the `terra` package we do not have to worry about further complications.
 
-```{r}
+```{r set cooridnates}
 if(FALSE){ #Prevents re-load
   #Boundries of data set
   xmin <- -72
@@ -181,7 +181,7 @@ if(FALSE){ #Prevents re-load
 
 For the DAYMET surface temperature data we can now repeat the same procedure as in 3.2.1 with the exception of storing the data in a netcdf4 format.
 
-```{r}
+```{r daymet data}
 if(FALSE){
   # Define the bounding box coordinates
   xmin <- -72; xmax <- -70
@@ -253,7 +253,7 @@ To visualize the result of [4 GDD formula], I will apply the function on the yea
 >
 > I decided to let $t_{ref}$ be equal to 5.
 
-```{r, warning=FALSE, fig.align='center', fig.cap="Figure 1: GDD as the cumulative temperature sum with blue representing cold days not contributing to accumulating energy and red warm days contributing to accumulating energy for leave out for the year 2010. Vertical line representing the date of leave out and the horizontal line the critical cumulative GDD value at this day."}
+```{r gdd example, warning=FALSE, fig.align='center', fig.cap="Figure 1: GDD as the cumulative temperature sum with blue representing cold days not contributing to accumulating energy and red warm days contributing to accumulating energy for leave out for the year 2010. Vertical line representing the date of leave out and the horizontal line the critical cumulative GDD value at this day."}
 #Filter only 2010 of temperature data set
 harvard_filter <- harvard_data |>
   filter(year == 2010)
@@ -320,7 +320,7 @@ To calibrate the hyperparamters I opted to use the Mean average Error (MAE) func
 
 Given the LOESS function in [5.1 LOESS function] and the results of [4.1 Evaluation], I re-used the code given in the tutorial and only changed the initial guess for the critical cumulative sum value and the function from RMSE to MAE. I set the initial guess for the critical cumulative sum to be near the value in [4.1 Evaluation] because I assumed the effective result will be near this result (output: 157.445; rounded to the nearest whole number: 157).
 
-```{r, warning=FALSE}
+```{r optimization, warning=FALSE}
 # starting model parameters
 par = c(5, 157)
 
@@ -353,7 +353,7 @@ optim_par = GenSA::GenSA(
 
 Finally I will analyse the resulting parameters. To do so, first I will group the whole temperature data set from the Harvard site by year and summaries the values by the predicted day of leave out, with the help of the function created in [4 GDD formula].
 
-```{r}
+```{r predict}
 # run the model for all years
 # to get the phenology predictions
 predictions <- harvard_data |>
@@ -376,14 +376,14 @@ predictions <- na.omit(predictions) |>
 
 Given the resulting data frame, we can now plot the observed values (phenology data set) with the predicted values. I added a dotted line, which should represent the ideal case, where the predicted values exactly math the observed values, as well as a solid line, which represent a linear fit through the plotted data (i.e. the mean modeled vs. observed case deviation).
 
-```{r, echo=FALSE}
+```{r model parameters, echo=FALSE}
 #Extract coefficients of model
 fit <- lm(prediction ~ observation, data = predictions)
 a <- round(as.numeric(fit$coefficients[2]), 3) #Slope
 b <- round(as.numeric(fit$coefficients[1]), 3) #Intercept
 ```
 
-```{r, message=FALSE, fig.align='center', fig.cap="Figure 2: Scatterplot of observed and modelled DOY of leave out. A linear regression (solid line) is overplotted, including a confidential interval (grey area) and a ideal szenario of relation between observed and medelled DOY (dotted line)."}
+```{r model evaluation, message=FALSE, fig.align='center', fig.cap="Figure 2: Scatterplot of observed and modelled DOY of leave out. A linear regression (solid line) is overplotted, including a confidential interval (grey area) and a ideal szenario of relation between observed and medelled DOY (dotted line)."}
 ggplot(data = predictions) +
   geom_point(aes(
     x = observation,
@@ -420,7 +420,7 @@ Finally we want to apply the function created up until now on a two dimensional 
 
 In a first step we will load in the MCD12Q2 data set, set the coordinate reference frame to be the WGS84 and then transform the numerical values of the DOY variable to start at 1 at the 1. January 2010. Note that we might need to discard values below the 1.1.2010. This set will serve as the reference result.
 
-```{r}
+```{r load observed data}
 r1 <- terra::rast(
   "../data_raw/MCD12Q2.061_2010/MCD12Q2.061_Greenup_0_doy2010001000000_aid0001.tif"
   )
@@ -435,7 +435,7 @@ r1 <- terra::ifel(r1 > val, r1, NA) - val
 
 In the next step we can now plot the result. To compare both results side by side, I will store the resulting graph inside a variable as well.
 
-```{r, fig.align='center', fig.cap="Figure 3: Spacially observed date of leave out for the greater Boston (MA) region in the US in 2010 given the MCD12Q12 data set"}
+```{r plot observed data, fig.align='center', fig.cap="Figure 3: Spacially observed date of leave out for the greater Boston (MA) region in the US in 2010 given the MCD12Q12 data set"}
 p1 <- ggplot() +
   tidyterra::geom_spatraster(data = r1) +
   
@@ -475,7 +475,7 @@ In the next step we will create the spacial result given the predictions we made
 >
 > To reduce run time of the code, I will only consider the first 180 days of 2010 to be relevant for the date of leave out.
 
-```{r}
+```{r load daymet data}
 r_temp <- terra::rast("../data_raw/DAYMET.004_2010/DAYMET.004_1km_aid0001.nc")
 
 #Seperate maximum and minimum temperature values
@@ -512,7 +512,7 @@ In a fourth step, we will combine both raster data sets according to the functio
 
 In the fifth and final step we can now apply a function that extracts the date of leave out given the critical cumulative sum value based on the model of [5 Optimal GDD].
 
-```{r}
+```{r preprocess predicted data}
 # 1. Pre processing for tmax data
 #Check if tmean < ref
 phen_check <- terra::app(
@@ -555,7 +555,7 @@ pheno_predic <- terra::app(
 
 With the final raster calculated, we can now plot the result. However, such that we are able to plot the result, first we need to re-define the coordinate reference system. Again, I will save the resulting graphic inside variable, such that we can compare the predicted and the observed leave out dates.
 
-```{r, fig.align='center', fig.cap="Figure 4: Spatially modelled date of leave out for the greater Boston (MA) region in the US in 2010 given the formula in chapter 4 and the DAYMET data set."}
+```{r plot predicted result, fig.align='center', fig.cap="Figure 4: Spatially modelled date of leave out for the greater Boston (MA) region in the US in 2010 given the formula in chapter 4 and the DAYMET data set."}
 #For plotting reset the coordinate reference frame
 terra::crs(pheno_predic) <- "epsg:4326"
 
@@ -598,7 +598,7 @@ by simply entering the name of the raster data, we get crucial information about
 
 With the aid of the function `terra::ext()` I made finally sure that the DAYMET data set had the same extent as the MCD12Q2 raster.
 
-```{r}
+```{r preprocess compare result}
 #Set dimension for MCD12Q2 data set to be equal to prediction set
 dimension <- terra::rast(
   nrows = 226, #Number of rows
@@ -617,7 +617,7 @@ terra::ext(pheno_predic) <- c(-72, -70, 42, 44)
 
 With the transformation done we can now simply subtract the observed leave out date from the predicted leave out date. After re-defining the coordinate reference frame we can plot the result.
 
-```{r, fig.align='center', fig.cap="Figure 5: Difference between modelled and observed date of leave out in the greater Boston (MA) region in the US in 2010, where red shows a earlier leave out observed than predicted and blue a later leave out observed than predicted."}
+```{r plot difference, fig.align='center', fig.cap="Figure 5: Difference between modelled and observed date of leave out in the greater Boston (MA) region in the US in 2010, where red shows a earlier leave out observed than predicted and blue a later leave out observed than predicted."}
 diff <- pheno_predic - r1
 
 #Set coordinate reference system for plot
@@ -660,7 +660,7 @@ The difference between both data set show a general 30-day discrepancy between p
 
 To better analyse the spacial extent of leave-out dates of predicted and observed case, I additionally created a plot containing a side by side visualization of predicted and observed leave out date of the greater Boston (MA) region in the US.
 
-```{r, fig.align='center', fig.cap="Figure 6: Side-by-side comparison of left the observed date of leave out in 2010 and right the predicted date of leave out in 2010 in Boston (MA) in the US."}
+```{r compare result, fig.align='center', fig.cap="Figure 6: Side-by-side comparison of left the observed date of leave out in 2010 and right the predicted date of leave out in 2010 in Boston (MA) in the US."}
 cowplot::plot_grid(p1, p2)
 ```
 
