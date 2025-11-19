@@ -11,7 +11,7 @@ output:
 
 To solve the report exercise, the following packages will be needed.
 
-```{r, message=FALSE, warning=FALSE}
+```{r load packages, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -25,7 +25,7 @@ library(plotROC)
 To implement the random forest model we will need the following data
 set.
 
-```{r}
+```{r load data}
 df <- readRDS("../data_raw/df_digital_soil_mapping.rds")
 ```
 
@@ -47,7 +47,7 @@ To simplify the selection of variables needed to perform a *Random
 Forest* modelling we first define the target variable (here:
 `waterlog.100`) and the necessary variables we will apply the model on.
 
-```{r}
+```{r target and predictors}
 # Specify target
 target <- "waterlog.100"
 
@@ -62,7 +62,7 @@ validation sites as our test set. To guarantee no complications while
 performing the Random Forest classification, we will drop all `NA`
 values.
 
-```{r}
+```{r train and test set}
 df_train <- df |> filter(dataset == "calibration") |> drop_na()
 df_test <- df |> filter(dataset == "validation") |> drop_na()
 ```
@@ -75,7 +75,7 @@ categorical by using the function `factor()`. In addition we will return
 basic information about the model, such as the out-of-the-bag error OOB,
 which will be useful for the interpretation of the result later on.
 
-```{r}
+```{r basic model}
 rf_basic <- ranger(
   formula = factor(df_train[, target]) ~ ., # Model formula
   data = df_train[, predictors], # Target variable
@@ -92,7 +92,7 @@ rf_basic
 To evaluate the model, we will apply the generated Random Forest model
 on the test set separated in chapter [3.1 Preprocessing].
 
-```{r}
+```{r basic model eval}
 # Predict waterlog.100 on test set
 rf_eval <- predict(
   rf_basic, # Model
@@ -115,7 +115,7 @@ positive, true negative, false positive and false negative values) as
 well as statistical analysis of the categorical data set such as
 Sensitivity, Specificity and Balanced Accuracy values.
 
-```{r}
+```{r basic model matrix}
 conf_matrix <- confusionMatrix(
   data = df_eval$pred, # Predicted values
   reference = as.factor(df_eval$waterlog.100), # Observed values
@@ -138,7 +138,7 @@ by the waterlogged (1) and not waterlogged (0) cases and summaries them
 by taking the sum. If the test set is balanced, there should be about as
 many waterlogged as not waterlogged cases.
 
-```{r}
+```{r waterlogged vs not}
 # Test set
 balance_test <- df_eval |>
   group_by(waterlog.100) |> # Group by observations
@@ -177,7 +177,7 @@ compare the result with the result given in chapter [3 Simple model].
 To select the most explaining variables I will use the `Boruta` package.
 In addition I will return the hierarchy of importance of each variable.
 
-```{r, fig.align='center', fig.height=18, fig.cap="Figure 1: Variable selection based on the Boruta package"}
+```{r variable selection, fig.align='center', fig.height=18, fig.cap="Figure 1: Variable selection based on the Boruta package"}
 set.seed(42)
 
 # run the algorithm
@@ -212,7 +212,7 @@ the most explaining variables. Hereby we will use the `filter` function
 of `dplyr` package and extract row names from the resulting data frame
 above.
 
-```{r}
+```{r select variable}
 predictors_selected <- df_bor |> 
   filter(decision == "Confirmed") |> # Filter all variables with "confirmed"
   pull(rowname) # Extract rownames from it
@@ -229,7 +229,7 @@ chapter [4.2 Train new model].
 > We again need to use the function `factor` to specify the
 > `waterlog.100` variable as categorical.
 
-```{r}
+```{r train variable selection}
 rf_bor <- ranger( 
   formula = factor(df_train[, target]) ~ ., # target variable
   data = df_train[, predictors_selected], # Predictor variables
@@ -244,7 +244,7 @@ rf_bor
 
 Now we can repeat the same step as in chapter [3.3 Model evaluation].
 
-```{r}
+```{r eval variable selection}
 rf_eval_vs <- predict(
   rf_bor,           # RF model
   data = df_test,   # Predictor data
@@ -263,7 +263,7 @@ df_eval_vs <- df_eval_vs |>
 Again we will use the `confusionMatrix()` function to summarise the
 result.
 
-```{r}
+```{r variable selection matrix}
 conf_matrix_vs <- confusionMatrix(
   data = df_eval_vs$pred,
   reference = as.factor(df_eval_vs$waterlog.100),
@@ -316,7 +316,7 @@ will use the `caret` package. In a first step however, we need to
 specify all dependent variables on our target variables and convert that
 into a `caret` readable format with the `formula()` function.
 
-```{r}
+```{r prepare function}
 # Create string with all variables
 fun_pred <- paste(
   c("waterlog.100 ~", paste(predictors, collapse = " + ")),
@@ -344,7 +344,7 @@ selected a few values.
 > realized that `waterlog.100` is categorical, it is not necessary to
 > specify it again. Thereby we can simply ignore the warning message.
 
-```{r, warning=FALSE}
+```{r tuning model, warning=FALSE}
 mod_cv <- train(
   fun_pred, # Model function
   data = df_train, # training set
@@ -375,7 +375,7 @@ To train the new model we simply repeat the step as in chapters [3.2
 Model training] and [4.2 Train new model] and add `mtry` and
 `min.node.size` values from chapter [5.1 Hyperparameter adjustment].
 
-```{r}
+```{r train optimized model}
 rf_optim <- ranger( 
   formula = factor(df_train[, target]) ~ ., # target variable
   data = df_train[, predictors_selected], # Predictor variables
@@ -393,7 +393,7 @@ rf_optim
 To evaluate the optimized model we can repeat the process from chapter
 [3.3 Model evaluation] or [4.3 Evaluate new model].
 
-```{r}
+```{r optimized model eval}
 rf_eval_optim <- predict(
   rf_optim, # RF model
   data = df_test, # Predictor data
@@ -412,7 +412,7 @@ df_eval_optim <- df_eval_optim |>
 Again we will use the `confusionMatrix()` function to summarise the
 result.
 
-```{r}
+```{r optimized model matrix}
 conf_matrix_optim <- confusionMatrix(
   data = df_eval_optim$pred,
   reference = as.factor(df_eval_optim$waterlog.100),
@@ -451,7 +451,7 @@ The aim of this chapter is to create a Reicever-operating-characteristic (ROC) c
 To model if a soil is waterlogged probabilisticaly, we can apply the
 same model as in chapter [5.2 Train optimized model] and add the `probability = TRUE` statement to the `ranger()` function. 
 
-```{r}
+```{r probabilistic model}
 rf_prob <- ranger( 
   formula = factor(df_train[, target]) ~ ., # target variable
   data = df_train[, predictors_selected], # Predictor variables
@@ -469,7 +469,7 @@ rf_prob
 
 To create the ROC curve we need to apply the model onto the test set. The resulting data will now no longer be in a binary form but in a continuous form, where the values range from zero to one and representing the probability for a soil to be 0 (or not waterlogged) or 1 (or waterlogged). Note that the sum of both always must equal 1.
 
-```{r}
+```{r predict probabilistic result}
 rf_eval_prob <- predict(
   rf_prob, # RF model
   data = df_test, # Predictor data
@@ -488,7 +488,7 @@ df_eval_prob <- df_eval_prob |>
 
 To create the ROC curve we will now only consider the probability of a soil to be waterlogged. To display the ROC curve we will use the `plotROC` package. This will enable the `geom_roc()` function in `ggplot2`. To create the ROC curve, we will use the observed variable `waterlog.100` of the evaluation data frame as the disease variable (denoted as d in the `aes()` argument in `ggplot2`) and the probability of being waterlogged (I named it pred_1 in the evaluation data frame)  as the marker variable (denoted as m in the `aes()` argument in `ggplot2`).
 
-```{r, fig.align='center', fig.cap="Figure 2: Reicever-operating-characteristic (ROC) curve of the optimized hyperparamter model with probabilistic chance of the soil being waterlogged"}
+```{r roc curve, fig.align='center', fig.cap="Figure 2: Reicever-operating-characteristic (ROC) curve of the optimized hyperparamter model with probabilistic chance of the soil being waterlogged"}
 ggplot(data = df_eval_prob, aes(d = waterlog.100, m = pred_1)) +
   geom_roc(n.cuts = 0, labels = FALSE) + # Add ROC curve & remove label and marker
   geom_abline( # Random guess line 
