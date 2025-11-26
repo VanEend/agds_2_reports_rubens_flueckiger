@@ -5,6 +5,9 @@ date: "2025-10-27"
 output: 
   html_document:
     toc: TRUE
+    toc_float:
+      collapsed: FALSE
+      smooth_scroll: FALSE
 ---
 
 # 1 Introduction
@@ -445,18 +448,16 @@ p1 <- ggplot() +
     name = "DOY"
     ) +
   
-  #Due to display issues, manually create tick labels 
+    #Due to display issues, manually create tick labels 
   scale_y_continuous(
-    name = "Longitude",
     breaks = seq(42, 44, by = 0.5),
     labels = c("42°N", "42.5°N", "43°N", "43.5°N", "44°N")
     ) +
   scale_x_continuous(
-    name = "Lattitude",
     breaks = seq(-72, -70, by = 0.5),
     labels = c("72°W", "71.5°W", "71°W", "70.5°W", "70°W")
     ) +
-  
+
   #Add title
   labs(
     title = "Day of leave-out 2010; observed",
@@ -567,15 +568,13 @@ p2 <- ggplot() +
     na.value = NA,
     name = "DOY"
     ) +
-  
+
   #Due to display issues, manually create tick labels 
   scale_y_continuous(
-    name = "Longitude",
     breaks = seq(42, 44, by = 0.5),
     labels = c("42°N", "42.5°N", "43°N", "43.5°N", "44°N")
     ) +
   scale_x_continuous(
-    name = "Lattitude",
     breaks = seq(-72, -70, by = 0.5),
     labels = c("72°W", "71.5°W", "71°W", "70.5°W", "70°W")
     ) +
@@ -635,15 +634,13 @@ ggplot() +
     na.value = NA,
     name = "DOY"
     ) +
-  
+
   #Due to display issues, manually create tick labels 
   scale_y_continuous(
-    name = "Longitude",
     breaks = seq(42, 44, by = 0.5),
     labels = c("42°N", "42.5°N", "43°N", "43.5°N", "44°N")
     ) +
   scale_x_continuous(
-    name = "Lattitude",
     breaks = seq(-72, -70, by = 0.5),
     labels = c("72°W", "71.5°W", "71°W", "70.5°W", "70°W")
     ) +
@@ -666,7 +663,7 @@ cowplot::plot_grid(p1, p2)
 
 In the observed case plants seam to leave out later in coast regions and in the upper left corner, which I assume to be at a higher altitude. All other regions seem to be rather homogeneous. however, one can see a slight earlier leave out in the lower right corner; the city of Boston, Massachusetts. The gradient between lower region to higher region, as well as the urban heat island effect is even better visible in the predicted leave out date raster. One can see that plants leave out progressively later the northern the location.
 
-To understand on why we might observe these phenomena we need to understand the climatological frame of early 2010 of the Northeastern region of the US. 2010 started with a moist and cold winter (starting in December 2009 until February 2010; some region reported a record amount of snowfall) followed by a record warmth degree in the spring season, which lead to the 8th smallest April snow cover extend of the past 44 years (NOAA, 2011). Given that information we can conclude, that the lack of snow cover in the greater Boston region might be the reason for the earlier than predicted leave out dates. As long as snow covers the ground, plants are not able to access (enough) energy in form of solar radiation to trigger blossoming. Our predicted model however accounts the snow cover in a way. Since the critical cumulative temperature value is not a physical number but rather an arbitrary number, it can help to account for snow cover up until a certain time in the year. That is done while adjusting the hyperparameters with known events. However, since in 2010 the snow cover already melted in late March to early April, blossoming already started at this point. Proof for that hypothesis is the highest discrepancy between observed and predicted leave out dates in higher regions. Since the urban heat island effect is strongly effecting temperature and the snow cover in urban regions, the effect is less pronoun in Boston. Hence we are seeing only small to no discrepancy between observed and predicted leave out dates in Boston. The coastal region phenomena might lead from warming effects in the winter months due to the proximity to the ocean and not accounted effects in the spring months, such as lack of water or too high salinity. In summary we can conclude that the main contribution to earlier than predicted leave out dates root from lack of snow cover due to rapid warmth in early spring in the Northeastern region of the US.
+To understand on why we might observe these phenomena we need to understand the climatological frame of early 2010 of the Northeastern region of the US. 2010 started with a moist and cold winter (starting in December 2009 until February 2010; some region reported a record amount of snowfall) followed by a record warmth degree in the spring season, which lead to the 8th smallest April snow cover extend of the past 44 years (NOAA, 2011). Given that information we can conclude, that the lack of snow cover in the greater Boston region might be the reason for the earlier than predicted leave out dates. As long as snow covers the ground, plants are not able to access (enough) energy in form of solar radiation to trigger blossoming. Our predicted model however accounts the snow cover in a way. Since the critical cumulative temperature value is not a physical number but rather an arbitrary number, it can help to account for snow cover up until a certain time in the year. That is done while adjusting the hyperparameters with known events. However, since in 2010 the snow cover already melted in late March to early April, blossoming already started at this point. Proof for that hypothesis is the highest discrepancy between observed and predicted leave out dates in higher regions. Since the urban heat island effect is strongly effecting temperature and the snow cover in urban regions, the effect is less pronoun in Boston. Hence we are seeing only small to no discrepancy between observed and predicted leave out dates in Boston. The coastal region phenomena might lead from warming effects in the winter months due to the proximity to the ocean and not accounted effects in the spring months, such as lack of water or too high salinity. In summary we can conclude that the main contribution to earlier than predicted leave out dates root from lack of snow cover due to rapid warmth in early spring in the North-eastern region of the US.
 
 # 8 Sources
 
