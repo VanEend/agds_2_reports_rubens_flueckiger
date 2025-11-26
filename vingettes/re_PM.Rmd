@@ -448,16 +448,6 @@ p1 <- ggplot() +
     name = "DOY"
     ) +
   
-    #Due to display issues, manually create tick labels 
-  scale_y_continuous(
-    breaks = seq(42, 44, by = 0.5),
-    labels = c("42°N", "42.5°N", "43°N", "43.5°N", "44°N")
-    ) +
-  scale_x_continuous(
-    breaks = seq(-72, -70, by = 0.5),
-    labels = c("72°W", "71.5°W", "71°W", "70.5°W", "70°W")
-    ) +
-
   #Add title
   labs(
     title = "Day of leave-out 2010; observed",
@@ -569,16 +559,6 @@ p2 <- ggplot() +
     name = "DOY"
     ) +
 
-  #Due to display issues, manually create tick labels 
-  scale_y_continuous(
-    breaks = seq(42, 44, by = 0.5),
-    labels = c("42°N", "42.5°N", "43°N", "43.5°N", "44°N")
-    ) +
-  scale_x_continuous(
-    breaks = seq(-72, -70, by = 0.5),
-    labels = c("72°W", "71.5°W", "71°W", "70.5°W", "70°W")
-    ) +
-  
   #Create title
   labs(
     title = "Day of leave-out 2010; predicted",
@@ -635,16 +615,6 @@ ggplot() +
     name = "DOY"
     ) +
 
-  #Due to display issues, manually create tick labels 
-  scale_y_continuous(
-    breaks = seq(42, 44, by = 0.5),
-    labels = c("42°N", "42.5°N", "43°N", "43.5°N", "44°N")
-    ) +
-  scale_x_continuous(
-    breaks = seq(-72, -70, by = 0.5),
-    labels = c("72°W", "71.5°W", "71°W", "70.5°W", "70°W")
-    ) +
-  
   #Create title
   labs(
     title = "Day of leave-out 2010; Prediction - observation",
