@@ -29,11 +29,11 @@ In the following chapters I will implement the GDD function and the RMSE to MAE 
 To reduce the length of this file I saved functions created for this exercise into a separate R file which I will load in with all necessary packages used.
 
 ```{r packages, warning=FALSE, message=FALSE}
-library(phenocamr)
 library(appeears)
-library(sf)
 library(dplyr)
 library(ggplot2)
+library(phenocamr)
+library(sf)
 
 source("../functions/GDD_functions.R")
 ```
