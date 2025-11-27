@@ -15,12 +15,12 @@ output:
 To solve the report exercise, the following packages will be needed.
 
 ```{r load packages, message=FALSE, warning=FALSE}
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(ranger)
 library(caret)
+library(dplyr)
+library(ggplot2)
 library(plotROC)
+library(ranger)
+library(tidyr)
 ```
 
 # 2 Load data sets
