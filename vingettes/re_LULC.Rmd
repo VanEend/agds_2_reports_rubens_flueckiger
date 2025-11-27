@@ -19,13 +19,13 @@ In the following chapters I will implement the changes I described above.
 # 2 Packages
 
 ```{r packages, warning=FALSE, message=FALSE}
-library(tidyr)
+library(dials)
 library(dplyr)
 library(parsnip)
-library(workflows)
-library(tune)
-library(dials)
 library(rsample)
+library(tidyr)
+library(tune)
+library(workflows)
 ```
 
 # 3 Load training and test set
