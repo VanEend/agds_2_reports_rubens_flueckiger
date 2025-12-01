@@ -268,7 +268,7 @@ group_folds_test <- purrr::map(
       select(class_spat) |> # Select one class
       mutate(idx = 1:n()) |> # Generate index column
       filter(class_spat == .) |> # Filter for index of currently selected class
-      pull(idx) # Store row index of theis class in idx column
+      pull(idx) # Store row index of this class in idx column
   }
 )
 ```
@@ -302,3 +302,82 @@ knitr::kable(
   caption = "Table 3: Compareing R^2 and RMSE value from random and spatial 5-fold CV"
 )
 ```
+
+# Environmental CV
+
+## Environmental classification
+
+```{r env kmeans}
+clusters <- kmeans(
+  dfs[, c(5, 6)], # Lon and lat as clustering parameters
+  centers = 5 # 5 clusters
+)
+
+# Include class to df. Note: convert into factor format
+dfs$class_env <- as.factor(clusters$cluster)
+```
+
+```{r plot env kmeans}
+ggplot() +
+  
+  #Plot coastline
+  geom_sf(data = coast, colour = "black", size = 0.2) +
+
+  # set extent in longitude and latitude
+  # to draw map strictly bounded by the specified extent
+  coord_sf(ylim = c(-60, 80), expand = FALSE) + 
+
+  # plot points on map
+  geom_point(data = dfs, aes(
+    x = lon, 
+    y = lat,
+    colour = class_env 
+  ), size = 0.2) +
+  
+  # Adjust point size of legend
+  guides(color = guide_legend(override.aes = list(size = 2))) +
+  
+  # Set colour
+  scale_color_manual(name = "Class", values = brewer.pal(n = 5, "Set1")) +
+  
+  # Lable adjustments
+  labs(
+    x = "", y = "",
+    title = "Spatial distribution of observations used in the dataset",
+    subtitle = "Classification according to environmental conditions (T and Prec.)"
+  ) +
+  
+  theme_bw() +
+  theme(legend.position = "right")
+```
+
+```{r table, message=FALSE}
+climate <- readr::read_csv("../data_raw/climate_table")
+
+knitr::kable(
+  climate,
+  align = "lll",
+  caption = "Table 4: Mean annual temperature and mean annual precipitation over all observations of a specific class",
+  col.names = c("Class", "Average temperature [°C]", "Average precipitation [mm/yr]")
+)
+```
+
+```{r violin env}
+ggplot(data = dfs, aes(x = class_env, y = leafN, fill = class_env)) +
+  geom_violin() + # Distribution using violin plot
+  
+  # Colour plot according to spatial distribution plot
+  scale_fill_manual(values = brewer.pal(n = 5, "Set1")) +
+  
+  # Adding x & y axis label as well as title
+  labs(
+    x = "Class",
+    y = "Leaf nitrogen",
+    title = "Distribution of Leaf N over each class",
+    subtitle = "Classification using environmental conditions (T and Prec.)"
+  ) +
+  
+  theme_bw() +
+  theme(legend.position = "") # Remove legend
+```
+
