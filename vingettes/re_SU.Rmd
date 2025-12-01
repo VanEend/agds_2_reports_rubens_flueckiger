@@ -52,3 +52,57 @@ dfs <- df |>
 skimr::skim(dfs)
 ```
 
+# Random CV
+
+```{r seed}
+set.seed(102)
+```
+
+```{r model preprocessing}
+# Select predictors
+predictors <- names(dfs[4:ncol(dfs)])
+
+# Create string with all variables
+fun_pred <- paste(
+  c("leafN ~", paste(predictors, collapse = " + ")),
+  collapse = " "
+)
+
+# Convert into a caret-readable string
+fun_pred <- formula(fun_pred)
+```
+
+```{r random cv}
+mod_cv <- train(
+  fun_pred, # Model function
+  data = dfs, # training set
+  method = "ranger", # Random Forest model
+  trControl = trainControl(
+    method = "cv", # Cross-Validation method
+    number = 5 # 5-Fold CV
+  ),
+  tuneGrid = data.frame(
+    .mtry = 3, # 
+    .min.node.size = 12,
+    .splitrule = "variance" # Default
+  )
+)
+
+# Return metrics
+stat <- mod_cv$resample[c("Rsquared", "RMSE")]
+stat <- stat |> rename( # Rename row names
+  "Rsq_ran" = "Rsquared",
+  "RMSE_ran" = "RMSE"
+) |> round(3) |> mutate( # Round observations
+  "Fold" = mod_cv$resample["Resample"]# Fold number
+) 
+
+stat <- stat[c("Fold", "Rsq_ran", "RMSE_ran")] # Reorder columns
+
+knitr::kable(
+  stat, 
+  align = "lcc",
+  caption = "Table 2: R^2 and RMSE values from a random 5-fold CV"
+)
+```
+
