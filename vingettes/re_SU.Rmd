@@ -381,3 +381,83 @@ ggplot(data = dfs, aes(x = class_env, y = leafN, fill = class_env)) +
   theme(legend.position = "") # Remove legend
 ```
 
+## Modelling
+
+```{r split env data}
+# Return Index of every class except searched one
+group_folds_train_2 <- purrr::map(
+  seq(length(unique(dfs$class_env))),
+  ~ {
+    dfs |>
+      select(class_env) |>
+      mutate(idx = 1:n()) |>
+      filter(class_env != .) |>
+      pull(idx)
+  }
+)
+
+# Return index of searched one
+group_folds_test_2 <- purrr::map(
+  seq(length(unique(dfs$class_env))),
+  ~ {
+    dfs |>
+      select(class_env) |>
+      mutate(idx = 1:n()) |>
+      filter(class_env == .) |>
+      pull(idx)
+  }
+)
+```
+
+```{r climate table, echo=FALSE}
+if(FALSE){
+  # Generate climatological table
+  class <- seq(1:5) # Classes
+  climate <- data.frame(class)
+  
+  for(i in 1:5){
+    data <- dfs[group_folds_test_2[[i]], ] # Generate df for class
+    
+    climate[i, "Temperatue"] <- round(mean(data$mat), 3) # Mean temperature
+    climate[i, "Precipitation"] <- round(mean(data$map), 3) # Mean precipitation
+  }
+  
+  # Save file
+  write.csv(
+    climate,
+    file = "../data_raw/climate_table",
+    row.names = FALSE
+  )
+}
+```
+
+```{r env cv}
+out_2 <- purrr::map2_dfr(
+  group_folds_train_2,
+  group_folds_test_2,
+  ~ train_test_by_fold(df = dfs, .x, .y)
+) |>
+  mutate(test_fold = 1:5)
+```
+
+```{r table env}
+stat <- stat |> mutate( # Add spatial cv metrics
+  "Rsq_env" = out_2$rsq,
+  "RMSE_env" = out_2$rmse
+)
+
+stat <- stat[c("Fold", # Reorder columns
+  "Rsq_ran",
+  "Rsq_spat",
+  "Rsq_env",
+  "RMSE_ran",
+  "RMSE_spat",
+  "RMSE_env"
+)] 
+
+knitr::kable(
+  stat,
+  align = "lcccccc",
+  caption = "Figure 3: Compareing R^2 and RMSE value from random, spatial and environmental 5-fold CV"
+)
+```
