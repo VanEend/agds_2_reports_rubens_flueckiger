@@ -13,7 +13,13 @@ output:
 # Packages and data
 
 ```{r packages, message=FALSE, warning=FALSE}
+library(caret)
 library(dplyr)
+library(ggplot2)
+library(ranger)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(sf)
 library(skimr)
 library(tidyverse)
 ```
@@ -104,5 +110,35 @@ knitr::kable(
   align = "lcc",
   caption = "Table 2: R^2 and RMSE values from a random 5-fold CV"
 )
+```
+
+# Spatial CV
+
+## Observation distribution
+
+```{r data distribution}
+# get coast outline
+coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
+
+ggplot() +
+  
+  #Plot coastline
+  geom_sf(data = coast, colour = "black", size = 0.2) +
+
+  # set extent in longitude and latitude
+  # to draw map strictly bounded by the specified extent
+  coord_sf(ylim = c(-60, 80), expand = FALSE) + 
+
+  # plot points on map
+  geom_point(data = dfs, aes(x = lon, y = lat), color = "red", size = 0.2) +
+  
+  # Lable adjustments
+  labs(
+    x = "", y = "",
+    title = "Spatial distribution of observations used in the dataset"
+  ) +
+  
+  theme_bw() +
+  theme(legend.position = "bottom")
 ```
 
