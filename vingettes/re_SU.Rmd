@@ -17,6 +17,7 @@ library(caret)
 library(dplyr)
 library(ggplot2)
 library(ranger)
+library(RColorBrewer)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(sf)
@@ -140,5 +141,70 @@ ggplot() +
   
   theme_bw() +
   theme(legend.position = "bottom")
+```
+
+## Spatial classification
+
+```{r geo kmeans}
+clusters <- kmeans(
+  dfs[, c(2, 3)], # Lon and lat as clustering parameters
+  centers = 5 # 5 clusters
+)
+
+# Include class to df. Note: convert into factor format
+dfs$class_spat <- as.factor(clusters$cluster)
+```
+
+```{r plot geo clusters}
+ggplot() +
+  
+  #Plot coastline
+  geom_sf(data = coast, colour = "black", size = 0.2) +
+
+  # set extent in longitude and latitude
+  # to draw map strictly bounded by the specified extent
+  coord_sf(ylim = c(-60, 80), expand = FALSE) + 
+
+  # plot points on map
+  geom_point(data = dfs, aes(
+    x = lon, 
+    y = lat,
+    colour = class_spat 
+  ), size = 0.2) +
+  
+  # Adjust point size of legend
+  guides(color = guide_legend(override.aes = list(size = 2))) +
+  
+  # Set colour
+  scale_color_manual(name = "Class", values = brewer.pal(n = 5, "Set1")) +
+
+  # Lable adjustments
+  labs(
+    x = "", y = "",
+    title = "Spatial distribution of observations used in the dataset",
+    subtitle = "Classification according to geographical location"
+  ) +
+  
+  theme_bw() + 
+  theme(legend.position = "right")
+```
+
+```{r violin spat}
+ggplot(data = dfs, aes(x = class_spat, y = leafN, fill = class_spat)) +
+  geom_violin() + # Distribution using violin plot
+  
+  # Colour plot according to spatial distribution plot
+  scale_fill_manual(values = brewer.pal(n = 5, "Set1")) +
+  
+  # Adding x & y axis label as well as title
+  labs(
+    x = "Class",
+    y = "Leaf nitrogen",
+    title = "Distribution of Leaf N over each class",
+    subtitle = "Classification using geographical location"
+  ) +
+  
+  theme_bw() +
+  theme(legend.position = "") # Remove legend
 ```
 
