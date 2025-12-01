@@ -208,3 +208,97 @@ ggplot(data = dfs, aes(x = class_spat, y = leafN, fill = class_spat)) +
   theme(legend.position = "") # Remove legend
 ```
 
+## Function
+
+```{r cv function}
+# create a function that trains a random forest model on a given set of rows and
+# predicts on a disjunct set of rows
+train_test_by_fold <- function(df, idx_train, idx_val){
+  
+  # Split into training and testing set
+  df_train <- df[idx_train, ] # training set
+  df_test <- df[idx_val, ] # testing set
+  
+  mod <- ranger::ranger(
+    formula = df_train[, 1] ~ ., # target
+    data = df_train[, c(4:9)], # predictors
+  )
+
+  pred <- predict(
+    mod, # model
+    data = df_test[ , c(4:9)] # corresponding rows + predictors
+  )
+  
+  # Combine obs and pred into 1 df
+  df_test$pred <- pred$predictions
+  
+  # Calculate RMSE
+  rmse <- Metrics::rmse(
+    actual = df_test$leafN,
+    predicted = df_test$pred
+  ) |> round(3)
+
+  # Calculate R2
+  rsq <- cor(df_test$leafN, df_test$pred, method = "pearson")^2 |> round(3)
+
+  return(tibble(rsq = rsq, rmse = rmse))
+}
+```
+
+## Modelling
+
+```{r split geo data}
+# Return Indices of every class except searched one
+group_folds_train <- purrr::map(
+  seq(length(unique(dfs$class_spat))), # Amount of classes
+  ~ {
+    dfs |>
+      select(class_spat) |> # Select one class
+      mutate(idx = 1:n()) |> # Generate index column
+      filter(class_spat != .) |> # Filter for classes which is not currently selected
+      pull(idx) # store row index of these classes in idx column 
+  }
+)
+
+# Return indices of searched class
+group_folds_test <- purrr::map(
+  seq(length(unique(dfs$class_spat))), # Amount of classes
+  ~ {
+    dfs |>
+      select(class_spat) |> # Select one class
+      mutate(idx = 1:n()) |> # Generate index column
+      filter(class_spat == .) |> # Filter for index of currently selected class
+      pull(idx) # Store row index of theis class in idx column
+  }
+)
+```
+
+```{r geo cv}
+out <- purrr::map2_dfr(
+  group_folds_train,
+  group_folds_test, 
+  ~ train_test_by_fold(df = dfs, .x, .y) # Function
+) |>
+  mutate(test_fold = 1:5) # CV fold row
+```
+
+```{r table spat}
+stat <- stat |> mutate( # Add spatial cv metrics
+  "Rsq_spat" = out$rsq,
+  "RMSE_spat" = out$rmse
+)
+
+stat <- stat[c( # Reorder columns
+  "Fold",
+  "Rsq_ran",
+  "Rsq_spat",
+  "RMSE_ran",
+  "RMSE_spat"
+)] 
+
+knitr::kable(
+  stat,
+  align = "lcccc",
+  caption = "Table 3: Compareing R^2 and RMSE value from random and spatial 5-fold CV"
+)
+```
