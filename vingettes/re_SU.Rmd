@@ -8,6 +8,8 @@ output:
     toc_float:
       collapsed: FALSE
       smooth_scroll: FALSE
+editor_options: 
+  chunk_output_type: inline
 ---
 
 # 1 Introduction
@@ -24,7 +26,7 @@ A random cross-validation method splits data independent of their location into 
 
 ## 2.2 Distance operator
 
-The goal of using a euclidean distance operator is to use a metric, in this case it is the location of the observation given in longitude and latitude, to group an observation into a certain class. The underlying assumption is thereby that observations that are close to each other will encounter the same climatological conditions, thereby lowering the prediction error. However, as we want to predict a certain target variable with given observable predictors, such as temperature, solar irradiance, precipitation or pressure, one could also use a subset of these predictors to group observations into different classes directly. This approach will yield the same effect as the distance operator approach since observations under similar climatological conditions (in our case we limited the climatological conditions inside the selected subset of the predictors), will be grouped into the same class.
+The goal of using a euclidean distance operator to check if a target site is within a certain distance from a observation site to ensure applicability of this target site is given, one does not necessarily need to use a euclidean distance metric as shown in the paper from Ludwig et al. The applicability of the target site can be measured more directly by comparing the predictors of the target site with those of the observations. Doing this comparison one does get a n-dimensional room (with n the number of predictors used to model the target variable) where the distance between the point cloud of the observation sites and the the target site can be used to determine the applicability of the model on the target site. This is not only a more direct but also a more accurate metric of identifying the applicability, as the target is a direct function of the environmental conditions given through the predictors. The longitudinal and latitudinal information of target and observational sites are (only) a indirect function of the target variable (spatial information is a function of environment, which in return is a function of the target variable).
 
 # 3 Packages and data
 
@@ -103,7 +105,7 @@ I will use the `caret` package to perform the random CV. Thereby we first need t
 
 ```{r model preprocessing}
 # Select predictors
-predictors <- names(dfs[4:ncol(dfs)])
+predictors <- c("elv", "mat", "map", "ndep", "mai", "Species")
 
 # Create string with all variables
 fun_pred <- paste(
@@ -127,7 +129,7 @@ mod_cv <- train(
     number = 5 # 5-Fold CV
   ),
   tuneGrid = data.frame(
-    .mtry = 3, # 
+    .mtry = 3, 
     .min.node.size = 12,
     .splitrule = "variance" # Default
   )
@@ -201,7 +203,7 @@ To perform a spatial CV, we first need to group the observations. To do so we wi
 
 ```{r geo kmeans}
 clusters <- kmeans(
-  dfs[, c(2, 3)], # Lon and lat as clustering parameters
+  dfs[, c("lon", "lat")], # Lon and lat as clustering parameters
   centers = 5 # 5 clusters
 )
 
@@ -247,11 +249,11 @@ ggplot() +
 
 Following groups can be observed:
 
-1.  Eastern Europe including western Asia, south eastern Sweden and one observation in Africa
-2.  The American continent including the Iberian peninsula, the UK and the western part of France
-3.  Central Europe including Denmark, south western Sweden and south Norway
-4.  Northern Scandinavia
-5.  China, India and Australia
+-   Eastern Europe including western Asia, south eastern Sweden and one observation in Africa
+-   The American continent including the Iberian peninsula, the UK and the western part of France
+-   Central Europe including Denmark, south western Sweden and south Norway
+-   Northern Scandinavia
+-   China, India and Australia
 
 In addition, we can show the distribution of leaf N over one class using a violin plot.
 
@@ -274,15 +276,15 @@ ggplot(data = dfs, aes(x = class_spat, y = leafN, fill = class_spat)) +
   theme(legend.position = "") # Remove legend
 ```
 
-From the distribution one can see that class 5 (China, India, Australia) offers the widest range of observations, where as class 1 (eastern Europe, western Asia, Africa) and 4 (northern Scandinavia) are heavily concentrated towards a small range of Leaf N values. class 2 (America, Iberian peninsula, UK) and 3 (central Europe) show very similar distribution with a two-peak distribution (a lower and a higher), where class 3 shows general higher leaf N values compared to 2.
+From the distribution one can see that China, India, Australia class offers the widest range of observations, where as the eastern Europe, western Asia, Africa class and the northern Scandinavia class are heavily concentrated towards a small range of Leaf N values. Class America, Iberian peninsula, UK and class central Europe show very similar distribution with a two-peak distribution (a lower and a higher), where class central Europe shows general higher leaf N values compared to class America Iberian peninsula, UK.
+
+> **Note:**
+>
+> Even though I set a seed prior, the class numbers seam to vary randomly from one run-through to the next. I thereby could not use numbers to indicate which class I was characterising.
 
 ## 5.3 Function
 
 To extract the $R^2$ and $RMSE$ value from each CV-fold performed, I will first define a function which takes a data frame (the training set), the indices to consider for training and the indices to consider for validating as an input. The function will model the leaf N content given the predictors defined in chapter [4 Random CV] and validate the result by applying the generated model on the training set reduced to only contain data with the validation indices. The resulting predicted leaf N will be compared with the observed leaf N from the validation training set and the $R^2$ as well as the $RMSE$ value will be returned.
-
-> **Note**
->
-> Since the program returned an error when using `df[idx_val, 1]` as input for the `ranger::ranger()` function, I defined a training data set `df_train` and a testing data set `df_test` by taking a subset of the input data frame before using the `ranger::ranger()` function.
 
 ```{r cv function}
 # create a function that trains a random forest model on a given set of rows and
@@ -293,14 +295,17 @@ train_test_by_fold <- function(df, idx_train, idx_val){
   df_train <- df[idx_train, ] # training set
   df_test <- df[idx_val, ] # testing set
   
+  # Predictors
+  predictors <- c("elv", "mat", "map", "ndep", "mai", "Species")
+  
   mod <- ranger::ranger(
-    formula = df_train[, 1] ~ ., # target
-    data = df_train[, c(4:9)], # predictors
+    x = df_train[, predictors],
+    y = df_train$leafN
   )
 
   pred <- predict(
     mod, # model
-    data = df_test[ , c(4:9)] # corresponding rows + predictors
+    data = df_test # testing the result
   )
   
   # Combine obs and pred into 1 df
@@ -314,7 +319,7 @@ train_test_by_fold <- function(df, idx_train, idx_val){
 
   # Calculate R2
   rsq <- cor(df_test$leafN, df_test$pred, method = "pearson")^2 |> round(3)
-
+  
   return(tibble(rsq = rsq, rmse = rmse))
 }
 ```
@@ -353,8 +358,8 @@ Given the training and testing set we can now apply the function created in chap
 
 ```{r geo cv}
 out <- purrr::map2_dfr(
-  group_folds_train,
-  group_folds_test, 
+  .x = group_folds_train,
+  .y = group_folds_test,
   ~ train_test_by_fold(df = dfs, .x, .y) # Function
 ) |>
   mutate(test_fold = 1:5) # CV fold row
@@ -383,7 +388,7 @@ knitr::kable(
 )
 ```
 
-As one can see, the $R^2$ value form the random CV is way higher than the one from the spatial CV. In addition, the $RMSE$ from the random CV is lower than the one from the spatial CV. This means that the random CV out performs the spatial CV in general. I assume that the large differences occur due to the fact that the leaf N values are very specific inside their clusters. This means that a crucial specific condition is missing during the modelling operation as it was left out to perform a CV. As the random CV method takes every class from the spatial CV into account to split the data into 5 different folds, the chance is high that the model had a very diverse set of data points, including information from a region, which the spatial CV model had no access to. This could explain the better outcome of the random CV model.
+One can see that in general the random CV performs a bit better compared to the spatial CV. Three folds of the spatial CV seam to have a pretty similar $R^2$ and $RMSE$ value, which suggest that these folds are pretty similar to each other. These folds are located in Europe (W-Europe & NA, Central Europe, Scandinavia). As already discussed in the chapter [2 Literature analysis], spatial CV offers a more realistic split of training data into n different folds compared to random CV, which thereby leads to a more generalisable approach for predicting unseen data.
 
 # 6 Environmental CV
 
@@ -458,11 +463,15 @@ knitr::kable(
 
 Following groups can be observed from the table and the plot above:
 
-1.  Wet mid latitudes: Temperate regions with high precipitation
-2.  Subtropics and boreal zones; dry regions (temperature less important)\
-3.  Cold & wet mid latitudes: Cold temperate regions with high precipitation
-4.  Warm & dry mid latitudes: Warm temperate regions with low precipitation
-5.  Tropical; High temperature and precipitation
+-   Wet mid latitudes: Temperate regions with high precipitation
+
+-   Subtropics and boreal zones; dry regions (temperature less important)
+
+-   Cold & wet mid latitudes: Cold temperate regions with high precipitation
+
+-   Warm & dry mid latitudes: Warm temperate regions with low precipitation
+
+-   Tropical; High temperature and precipitation
 
 In addition, we can show the distribution of leaf N over one class using a violin plot.
 
@@ -470,14 +479,14 @@ In addition, we can show the distribution of leaf N over one class using a violi
 ggplot(data = dfs, aes(x = class_env, y = leafN, fill = class_env)) +
   geom_violin() + # Distribution using violin plot
   
-  # Colour plot according to spatial distribution plot
+  # Colour plot according to environmental distribution plot
   scale_fill_manual(values = brewer.pal(n = 5, "Set1")) +
   
   # Adding x & y axis label as well as title
   labs(
     x = "Class",
     y = "Leaf nitrogen",
-    title = "Distribution of Leaf N over each class",
+    title = "Distribution of Leaf N over each class; violin plot",
     subtitle = "Classification using environmental conditions (T and Prec.)"
   ) +
   
@@ -485,7 +494,11 @@ ggplot(data = dfs, aes(x = class_env, y = leafN, fill = class_env)) +
   theme(legend.position = "") # Remove legend
 ```
 
-Except class 2 (subtropics and boreal zones), which has to major maxima pretty close to each other, every class shows a major leaf N concentration with a tail towards higher leaf N concentrations. Class 1 (wet mid latitudes) shows a major and a minor concentration distribution, where as in class (cold and wet mid latitudes) show a very strong major leaf N concentration. Class 4 (warm and dry mid latitudes) and class 5 (tropical) show a pretty similar distribution.
+Except the subtropics and boreal zones class, which has to major maxima pretty close to each other, every class shows a major leaf N concentration with a tail towards higher leaf N concentrations. Class wet mid latitudes shows a major and a minor concentration distribution, where as in class cold and wet mid latitudes show a very strong major leaf N concentration. Class warm and dry mid latitudes and class tropical show a pretty similar distribution.
+
+> **Note:**
+>
+> Even though I set a seed prior, the class numbers seam to vary randomly from one run-through to the next. I thereby could not use numbers to indicate which class I was characterising.
 
 ## 6.2 Modelling
 
@@ -574,9 +587,7 @@ knitr::kable(
 )
 ```
 
-As one can see, $R^2$ values of the environmental CV are in general higher than for a spatial CV, however still significantly lower than for a random CV. Differences in $RMSE$ values between environmental CV and spatial CV strongly depends on the fold. As for fold 1, spatial CV strongly outperforms environmental CV. The results on fold 2 show an opposite trend. $RMSE$ values for fold 3 show again a slightly better performance for spatial CV compared to environmental CV ans fold 4 shows again an opposite trend to fold 3. Fold 5 seams to return about the same $RMSE$ values. However, random CV returns a general lower, and thereby better, $RMSE$ value compared to both environmental CV and spatial CV.
-
-Again I assume that the large differences between performance of random CV and environmental/spatial CV lays in the rather specific conditions of each class used for environmental/spatial CV. Since random CV tries to split the training data in N different by retaining the distribution across all predictors, random CV will be more generalisable as the model has seen a more diverse data set. As for the better performance of environmental CV compared to spatial CV one has to compare the leaf N distributions of environmentally based classification and spatially based classification. One can see that the distributions of environmentally based classification are more similar to each other compared to the distributions of spatially based classification. This means that the more similar distribution has the same effect as the random CV on being more generalisable and thereby less error susceptible to regions with highly specific climatic conditions.
+Environmental CV does perform about as good as random CV and a bit better than spatial CV. $R^2$ and $RMSE$ values of environmental CV are nearly identical over all folds suggesting a very good generalisability. Compared to spatial CV, environmental CV offers a even more realistic depiction of reality, as it uses a directly dependent variable (in this case precipitation and temperature) to divide the training set into n different folds, compared to spatial CV, which *"only"* used a indirect variable (longitude and latitude) to split training data into folds. As discussed in the [2 Literature analysis] chapter, this approach should yield an even better generalisability due to the fact that we use direct dependent variables as the split-metric compared to an arbitrary split, which only makes sure that the distribution *"looks the same"*.
 
 # 7 Sources
 
