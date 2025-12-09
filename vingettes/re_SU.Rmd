@@ -300,7 +300,10 @@ train_test_by_fold <- function(df, idx_train, idx_val){
   
   mod <- ranger::ranger(
     x = df_train[, predictors],
-    y = df_train$leafN
+    y = df_train$leafN,
+    min.node.size = 12, # Pre requested from task
+    mtry = 3, # Pre requested from task
+    splitrule = "variance" # Default from caret::train
   )
 
   pred <- predict(
