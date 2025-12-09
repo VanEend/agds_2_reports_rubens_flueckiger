@@ -8,11 +8,28 @@ output:
     toc_float:
       collapsed: FALSE
       smooth_scroll: FALSE
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 # 1 Packages
 
 To solve the report exercise, the following packages will be needed.
+
+> **Note:**
+>
+> In this report exercise I have used version 0.13.1 of the `ranger`
+> package, which turned out to have a significant bug when modelling
+> and/or predicting a model for the report exercise *Spacial
+> Upscalling*. As of now, I managed to install version 0.16.0 of the
+> `ranger` package on my laptop, which seamed to fix this bug. This
+> could mean, that if re-run the code a different result could be
+> obtained (the modelling step will not be executed if simply run with
+> the `Run All` option in R Markdown, as it will take a very long time).
+> The results in the leaderboard seamed reasonable, thereby I decided
+> against re-running the modelling step in favour of adding this
+> disclaimer.
 
 ```{r load packages, message=FALSE, warning=FALSE}
 library(caret)
@@ -300,6 +317,7 @@ knitr::kable(
   col.names = c("Metric", "Simple Model", "VS Model") # column names
 )
 ```
+
 As one can see from the table above, the model with selected variables
 generalizes better given every metric above. Additionally the OOB is
 specified. Since the OOB of the model with selected variables is lower
@@ -309,7 +327,9 @@ model.
 
 # 5 Model optimization
 
-The aim of this chapter is to improve the initial simple model by tweaking the hyperparamteres `mtry` and `min.node.size` with the help of the `caret` package.
+The aim of this chapter is to improve the initial simple model by
+tweaking the hyperparamteres `mtry` and `min.node.size` with the help of
+the `caret` package.
 
 ## 5.1 Hyperparameter adjustment
 
@@ -447,12 +467,15 @@ generalizes better than the initial, simple model.
 
 # 6 Probabilistic predictions
 
-The aim of this chapter is to create a Reicever-operating-characteristic (ROC) curve given a probailistical prediction of a soil being waterlogged.
+The aim of this chapter is to create a Reicever-operating-characteristic
+(ROC) curve given a probailistical prediction of a soil being
+waterlogged.
 
 ## 6.1 Train probabilistic model
 
 To model if a soil is waterlogged probabilisticaly, we can apply the
-same model as in chapter [5.2 Train optimized model] and add the `probability = TRUE` statement to the `ranger()` function. 
+same model as in chapter [5.2 Train optimized model] and add the
+`probability = TRUE` statement to the `ranger()` function.
 
 ```{r probabilistic model}
 rf_prob <- ranger( 
@@ -470,7 +493,11 @@ rf_prob
 
 ## 6.2 ROC curve
 
-To create the ROC curve we need to apply the model onto the test set. The resulting data will now no longer be in a binary form but in a continuous form, where the values range from zero to one and representing the probability for a soil to be 0 (or not waterlogged) or 1 (or waterlogged). Note that the sum of both always must equal 1.
+To create the ROC curve we need to apply the model onto the test set.
+The resulting data will now no longer be in a binary form but in a
+continuous form, where the values range from zero to one and
+representing the probability for a soil to be 0 (or not waterlogged) or
+1 (or waterlogged). Note that the sum of both always must equal 1.
 
 ```{r predict probabilistic result}
 rf_eval_prob <- predict(
@@ -489,7 +516,14 @@ df_eval_prob <- df_eval_prob |>
   rename("waterlog.100" = "df_test.waterlog.100")
 ```
 
-To create the ROC curve we will now only consider the probability of a soil to be waterlogged. To display the ROC curve we will use the `plotROC` package. This will enable the `geom_roc()` function in `ggplot2`. To create the ROC curve, we will use the observed variable `waterlog.100` of the evaluation data frame as the disease variable (denoted as d in the `aes()` argument in `ggplot2`) and the probability of being waterlogged (I named it pred_1 in the evaluation data frame)  as the marker variable (denoted as m in the `aes()` argument in `ggplot2`).
+To create the ROC curve we will now only consider the probability of a
+soil to be waterlogged. To display the ROC curve we will use the
+`plotROC` package. This will enable the `geom_roc()` function in
+`ggplot2`. To create the ROC curve, we will use the observed variable
+`waterlog.100` of the evaluation data frame as the disease variable
+(denoted as d in the `aes()` argument in `ggplot2`) and the probability
+of being waterlogged (I named it pred_1 in the evaluation data frame) as
+the marker variable (denoted as m in the `aes()` argument in `ggplot2`).
 
 ```{r roc curve, fig.align='center', fig.cap="Figure 2: Reicever-operating-characteristic (ROC) curve of the optimized hyperparamter model with probabilistic chance of the soil being waterlogged"}
 ggplot(data = df_eval_prob, aes(d = waterlog.100, m = pred_1)) +
@@ -507,10 +541,35 @@ ggplot(data = df_eval_prob, aes(d = waterlog.100, m = pred_1)) +
   theme_bw()
 ```
 
-The resulting curve (solid black line) clearly displays a better than "random guess" model, denoted as the dashed line.
+The resulting curve (solid black line) clearly displays a better than
+"random guess" model, denoted as the dashed line.
 
 ## 6.3 Additional questions
 
-The threshold value chosen to determine whether a soil should be attributed to a waterlogged soil or not can be used to limit false predictions. Assuming we will use the probability of a soil being waterlogged, lowering the threshold means a less strict attribution which leads to more falsely waterlogged-attributed soils. Therefore, lowering the threshold leads to a higher risk of type 2 errors. On the other hand increasing the threshold means a more strict attribution which leads to more falsely not-waterlogged attributed soils. This leads to more type 1 errors. In the case of retaining building integrity by making sure that the soil is not waterlogged, it therefore would be advisable to increase the threshold value. For building sites, were waterlogged soils are unwanted but not critical, the threshold values can be lowered since the prime not waterlogged sites may already be reserved or taken by critical infrastructures, which must be build in non-waterlogged sites. However, the threshold value for unwanted waterlogged sites is highly variable and strongly depends on the wish of the builder.
+The threshold value chosen to determine whether a soil should be
+attributed to a waterlogged soil or not can be used to limit false
+predictions. Assuming we will use the probability of a soil being
+waterlogged, lowering the threshold means a less strict attribution
+which leads to more falsely waterlogged-attributed soils. Therefore,
+lowering the threshold leads to a higher risk of type 2 errors. On the
+other hand increasing the threshold means a more strict attribution
+which leads to more falsely not-waterlogged attributed soils. This leads
+to more type 1 errors. In the case of retaining building integrity by
+making sure that the soil is not waterlogged, it therefore would be
+advisable to increase the threshold value. For building sites, were
+waterlogged soils are unwanted but not critical, the threshold values
+can be lowered since the prime not waterlogged sites may already be
+reserved or taken by critical infrastructures, which must be build in
+non-waterlogged sites. However, the threshold value for unwanted
+waterlogged sites is highly variable and strongly depends on the wish of
+the builder.
 
-A similar-natured problem arises in remote sensing. When measuring the sea ice extend in polar regions a pixel usually contains both sea ice and water. Since water has a much lower albedo compared to ice, this drastically affects the resulting reflectance of a specific band (and its polarization) used to determine the extend and hence returning us a percentage of ice-covered water (using the NASA algorithm for instant). When determining the actual extend of the sea ice at a certain time we would need a threshold value of sea ice covered water for which we would attribute a pixel to be sea ice covered or not.
+A similar-natured problem arises in remote sensing. When measuring the
+sea ice extend in polar regions a pixel usually contains both sea ice
+and water. Since water has a much lower albedo compared to ice, this
+drastically affects the resulting reflectance of a specific band (and
+its polarization) used to determine the extend and hence returning us a
+percentage of ice-covered water (using the NASA algorithm for instant).
+When determining the actual extend of the sea ice at a certain time we
+would need a threshold value of sea ice covered water for which we would
+attribute a pixel to be sea ice covered or not.
