@@ -15,7 +15,12 @@ output:
 ```{r packages}
 library(caret)
 library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
 library(recipes)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(sf)
 library(themis)
 ```
 
@@ -27,7 +32,116 @@ df_train <- readr::read_csv("../data_raw/competition2025_training_data.csv")
 df_sites <- readr::read_csv("../data_raw/fdk_site_info.csv")
 ```
 
+## Data location
+
+```{r check missing sites}
+# Select all unique sites from test and training dataset in site info data
+idx_site_test <- which(df_sites$sitename %in% df_test$site)
+idx_site_train <- which(df_sites$sitename %in% df_train$site)
+
+# Combine all sites into one list and select only these sites
+idx_sites <- unique(c(idx_site_test, idx_site_train))
+relevant_sites <- df_sites[idx_sites, ]
+
+# Select all unique sites in test and training dataset
+sites_test <- unique(df_test$site)
+sites_train <- unique(df_train$site)
+
+# Combine into one list
+sites_all <- c(sites_train, sites_test)
+
+# Select all sites without information
+sites_all[!(sites_all %in% relevant_sites$sitename)]
+```
+
+```{r additional sites}
+# Load information about missing sites
+add_sites <- readr::read_csv("../data_raw/fdk_additional_sites.csv")
+
+# Combine additional sites and present sites into one dataset
+relevant_sites <- rbind(relevant_sites, add_sites)
+```
+
+```{r site location}
+# get coast outline
+coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
+
+ggplot() +
+  
+  #Plot coastline
+  geom_sf(data = coast, colour = "black", size = 0.2) +
+
+  # set extent in longitude and latitude
+  # to draw map strictly bounded by the specified extent
+  coord_sf(ylim = c(-60, 80), expand = FALSE) + 
+
+  # plot points on map
+  geom_point(
+    data = relevant_sites,
+    aes(x = lon, y = lat),
+    color = "red",
+    size = 1
+  ) +
+  
+  # Label adjustments
+  labs(
+    x = "", y = "",
+    title = "Spatial distribution of sites in the test and training set"
+  ) +
+  
+  theme_bw()
+```
+
+Centered arround US, EU and AUS
+
 # Impute data
+
+```{r spacial classification}
+# Create a five fold cluster
+set.seed(109)
+cluster <- kmeans(
+  relevant_sites[, c("lon", "lat")],
+  centers = 5
+)
+
+# Add cluster classes to dataset
+relevant_sites$class <- as.factor(cluster$cluster)
+
+ggplot() +
+  
+  #Plot coastline
+  geom_sf(data = coast, colour = "black", size = 0.2) +
+
+  # set extent in longitude and latitude
+  # to draw map strictly bounded by the specified extent
+  coord_sf(ylim = c(-60, 80), expand = FALSE) + 
+
+  # plot points on map
+  geom_point(
+    data = relevant_sites,
+    aes(x = lon, y = lat, color = class),
+    size = 1
+  ) +
+  
+  # Colour points according to their class
+  scale_color_manual(
+    values = brewer.pal(n = 5, "Set1"),
+    name = "Class"
+  ) +
+  
+  # Enlarge point size of legend
+  guides(color = guide_legend(override.aes = list(size = 2))) +
+  
+  # Label adjustments
+  labs(
+    x = "", y = "",
+    title = "Spatial distribution of sites in the test and training set"
+  ) +
+  
+  theme_bw()
+```
+
+Not ideal for spatial imputation
 
 ```{r random classification}
 # Create random sample of 10'000 sites
