@@ -350,6 +350,8 @@ optim_par = GenSA::GenSA(
    ),
  data = data
 )$par
+
+optim_par
 ```
 
 ## 5.3 Output analysis
