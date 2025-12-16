@@ -10,9 +10,13 @@ output:
       smoth_scroll: FALSE
 ---
 
-# Packages
+# 1 Introduction
 
-```{r packages}
+To accomplish the task of predicting the fLUE for new, unseen data given a training set, I have decided to use a random forest model. However, the main focus in this report exercise does not lie in the modelling step, but more on the step of filling missing values in the training and testing set. Many models can predict an outcome given a set of predictors only if the predictor set does not contain any missing data. The resulting model can thereby only be as good as its underlying data. Imputing missing data by filling missing values, without *disturbing* the original data as much as possible, is thereby a crucial pre-processing step in machine learning. In this report exercise I will include an imputation and an upsampling preprocessing step to the training set to model fLUE values based on multispectral informations from satellites.
+
+# 2 Packages
+
+```{r packages, message=FALSE, warning=FALSE}
 library(caret)
 library(dplyr)
 library(ggplot2)
@@ -24,15 +28,19 @@ library(sf)
 library(themis)
 ```
 
-# Datasets
+# 3 Datasets
 
-```{r datasets}
+In a first step we will load in the training and test set as well as a data frame containing informations about the stations used to retrieve multispectral informations.
+
+```{r datasets, message=FALSE}
 df_test <- readr::read_csv("../data_raw/competition2025_testing_data.csv")
 df_train <- readr::read_csv("../data_raw/competition2025_training_data.csv")
 df_sites <- readr::read_csv("../data_raw/fdk_site_info.csv")
 ```
 
-## Data location
+## 3.1 Data location
+
+In a next step we can display the spatial distribution of all sites used in the training and testing set. To accomplish this task, we can use the `unique()` function to determine all unique sites inside the training and testing site. Additionally we will check if all sites are included inside the site-information dataset.
 
 ```{r check missing sites}
 # Select all unique sites from test and training dataset in site info data
@@ -54,7 +62,15 @@ sites_all <- c(sites_train, sites_test)
 sites_all[!(sites_all %in% relevant_sites$sitename)]
 ```
 
-```{r additional sites}
+As one can see, not every site is included in the site-information dataset. Thereby I have included a dataset which includes information about longitude and latitude of the missing sites (these informations can be retrieved [here](https://fluxnet.org/sites/site-list-and-pages/)).
+
+> **Note:**
+>
+> -   The site `DK-NuF` is located in Nuuk, Greenland. Therefore, the site uses the abbreviation *GL* instead of *DK* (the station can be found under `GL-NuF`)
+>
+> -   As I will only display the location of all used stations, the dataset containing the missing sites only contains information about its location (longitude and latitude). To combine both datasets more easily, I filled the remaining columns given in the site-information dataset with `NA`.
+
+```{r additional sites, message=FALSE}
 # Load information about missing sites
 add_sites <- readr::read_csv("../data_raw/fdk_additional_sites.csv")
 
@@ -62,7 +78,9 @@ add_sites <- readr::read_csv("../data_raw/fdk_additional_sites.csv")
 relevant_sites <- rbind(relevant_sites, add_sites)
 ```
 
-```{r site location}
+Given the locations of the missing and present sites, we can now plot the spatial distribution of the locations.
+
+```{r site location, fig.align='center', fig.cap="Figure 1: Locations of all sites used in the training and test site."}
 # get coast outline
 coast <- rnaturalearth::ne_coastline(scale = 110, returnclass = "sf")
 
@@ -92,11 +110,13 @@ ggplot() +
   theme_bw()
 ```
 
-Centered arround US, EU and AUS
+As one can see, the most sites are located either in Europe, the US or in Australia.
 
-# Impute data
+# 4 Impute data
 
-```{r spacial classification}
+The training set contains over 100'000 observations. To reduce the run-time of the imputation process, I have decided to reduce the input dataset to randomly selected 10'000 observations. One could improve this step by splitting the training dataset into n different folds according to a metric (this could be spatial informations or based on predictors) and impute the training set according to these folds. This approach might generate more realistic imputed values, as observations nearer to each other have a high chance to be similar to each other (this approach would be similar to the spatial upsampling report exercise). To explain on why I have decided agianst using this approach, I will plot the result of a 5-fold classification spatial distribution based on spatial information.
+
+```{r spacial classification, fig.align='center', fig.cap="Figure 2: Distribution of sites used in the training and test set when classified according to its spatial location."}
 # Create a five fold cluster
 set.seed(109)
 cluster <- kmeans(
@@ -141,7 +161,9 @@ ggplot() +
   theme_bw()
 ```
 
-Not ideal for spatial imputation
+As one can see, for certain folds we would only get one or two sites to split the training set, which could lead to a lack of information to impute missing data properly.
+
+A classification based on predictor variables is also impossible, as there is no predictor in the training *and* test set, which does not contain any missing values. I thereby decided to use 10'000 randomly selected sites to use as a baseline to impute the missing data in the training and testing set. Important to note here is that the subset should contain every vegetation type included in the training set to appropriately predict the outcome.
 
 ```{r random classification}
 # Create random sample of 10'000 sites
@@ -153,6 +175,12 @@ subset_sites <- unique(df_train[idx, "vegtype"])$vegtype
 vegtypes <- unique(df_train$vegtype)
 vegtypes[!(vegtypes %in% subset_sites)]
 ```
+
+As one can see from the output, the random sampling of 10'000 observations does contain every vegetation type of the original data. We thereby can start to set a recipe with the `recipe()` function from the `recipes` package. To impute the missing data I will use a KNN (5 neighbours) approach with the `step_impute_knn()` function. Additionally I will normalise the data to *fake* the data as little as possible using the `step_center()` and the `step_scale()` function over all predictors. With the `prep()` function, all steps defined are being 'trained' such that they can be applied on the data set using the `bake()` function.
+
+> **Note:**
+>
+> As this step might take a while, I saved the outcomming imputed dataset and set the operation inside an `if(FALSE)` statement.
 
 ```{r fill NA train}
 if(FALSE){
@@ -189,6 +217,8 @@ if(FALSE){
 }
 ```
 
+Since the testing set contains vegetation types outside the training set we additionally need to add a `step_dummy()` function to convert the categorical variable into a dummy-numerical format to handle the additional variable. Other than that, the step above can be repeated for the test set.
+
 ```{r fill NA test}
 if(FALSE){
   
@@ -224,78 +254,17 @@ if(FALSE){
 }
 ```
 
-<<<<<<< HEAD
-# Modelling
+# 5 Upsample
 
-```{r cv recipe}
-set.seed(155) # Set seed
-folds <- caret::groupKFold(df_train_upsamp$flue, k = 5) # prepare folds
+With the imputation step done, we can now start to overemphasize fLUE values of drought situations. First however, we need to load the previously imputed datasets.
 
-traincntrlParams <- caret::trainControl( # Set fold settings
-  index = folds,
-  method = "cv"
-)
-```
-
-```{r set predictors}
-# Select predictors
-predictors <- c(
-  "NR_B1", "NR_B2", "NR_B3", "NR_B4", "NR_B5", "NR_B6", "NR_B7",
-  "LST", "t2m_era5", "ssrd_era5", "pcwd_era5", "vegtype"
-)
-
-# Create string with all variables
-fun_pred <- paste(
-  c("flue ~", paste(predictors, collapse = " + ")),
-  collapse = " "
-)
-
-# Convert into a caret-readable string
-fun_pred <- formula(fun_pred)
-```
-
-```{r model}
-mod_cv <- caret::train(
-  fun_pred, # Model function
-  data = df_train_upsamp, # training set
-  method = "ranger", # Random Forest model
-  trControl = traincntrlParams,
-  tuneGrid = data.frame(
-    .mtry = 3, 
-    .min.node.size = 5,
-    .splitrule = "variance"
-  )
-)
-```
-
-```{r predict}
-# Predict values
-pred <- predict(
-  mod_cv,
-  newdata = df_test_imp
-)
-```
-
-```{r save result}
-# Convert data into df format
-predicted_flue <- data.frame(pred)
-
-# Save df
-# Note: to not overwrite LULC prediction I have added the name of the repo
-# and renamed it after loading it into the folder
-readr::write_csv(
-  x = dplyr::rename(predicted_flue,
-                    flue_predicted = pred),
-  file = "~/Desktop/VanEend_results_mswm.csv")
-```
-
-# Upsample
-
-```{r load imputed data}
+```{r load imputed data, message=FALSE}
 # Load imputed files
 df_test_imp <- readr::read_csv("../data_raw/mswm_test_imputed")
 df_train_imp <- readr::read_csv("../data_raw/mswm_train_imputed")
 ```
+
+Next we need to make sure, that conditional variable `is_flue_drought` does not contain any missing values. As we now that `is_flue_drought` will take the value `TRUE` if the fLUE value is below 1 and `FALSE` if not, we can simply impute missing values manually.
 
 ```{r impute is_flue_drought}
 # Check for NA values for drought status
@@ -312,6 +281,8 @@ for(i in 1:length(flue_idx_na)){
 }
 ```
 
+To compare the ratio of `TRUE` to `FALSE` values before and after upsampling the dataset, I will display the amount of `TRUE` and `FALSE` values in a table.
+
 ```{r original ratio}
 # Distribution of drought and moist before upsampling
 orig <- count(df_train_imp, is_flue_drought, name = "orig")
@@ -324,6 +295,8 @@ knitr::kable(
   col.names = c("is fLUE drought", "Original dataset") # Column names
 )
 ```
+
+Before we can start to upscale `TRUE` values for `is_flue_drought`, we need to convert `is_flue_drought` into a factor format using the `as.factor()` function. Then we can set a recipe using `is_flue_drought` as the target. Using the `step_upsample()` function of the `themis` package we can now specify the final ratio of major to minor variable to be upsample to. I have set the final ratio to be at 0.5 (this means we have half as many `TRUE` values as `FALSE` values).  
 
 ```{r upsampling}
 # Change is_flue_drought values to factor format
@@ -344,6 +317,8 @@ pp_upsample <- recipe(
 df_train_upsamp <- bake(pp_upsample, new_data = NULL)
 ```
 
+Finally we can compare the amount before and after upsampling of `TRUE` and `FALSE` values.
+
 ```{r upsampled ratio}
 # Distribution of drought and not drought after upsampling
 upsamp <- count(df_train_upsamp, is_flue_drought, name = "upsamp")
@@ -360,7 +335,13 @@ knitr::kable(
 )
 ```
 
-# Modelling
+As one can see, we added about 20'000 `is_flue_drought = TRUE` values to the training set.
+
+# 6 Modelling
+
+Finally we can train a random forest model using the `caret` package.
+
+To train a model that generalises well to novel sites and is not overfitted to local conditions, I will use a cross-validation technique that delineates folds along sites. This can be accomplished using the `groupKFold()` function inside `caret`.
 
 ```{r cv recipe}
 set.seed(155) # Set seed
@@ -371,6 +352,8 @@ traincntrlParams <- caret::trainControl( # Set fold settings
   method = "cv"
 )
 ```
+
+Then we can set the function to predict fLUE based on a predictor set. To convert the function into a caret-usable function, we need to convert the format using the `as.formula()` function.
 
 ```{r set predictors}
 # Select predictors
@@ -389,6 +372,8 @@ fun_pred <- paste(
 fun_pred <- formula(fun_pred)
 ```
 
+Finally we can fit the model using the `ranger` method of `caret::train()`. To reduce runtime, I set `mtry` to 3 and `min.node.size` to 5, the default for a regression. 
+
 ```{r model}
 mod_cv <- caret::train(
   fun_pred, # Model function
@@ -403,6 +388,8 @@ mod_cv <- caret::train(
 )
 ```
 
+Given the random forest model, we can now apply the model on the unseen test set.
+
 ```{r predict, message=FALSE}
 # Predict values
 pred <- predict(
@@ -410,6 +397,8 @@ pred <- predict(
   newdata = df_test_imp
 )
 ```
+
+The resulting predictions will be saved for the competition.
 
 ```{r save result}
 # Convert data into df format
