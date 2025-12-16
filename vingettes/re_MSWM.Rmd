@@ -376,38 +376,23 @@ Finally we can fit the model using the `ranger` method of `caret::train()`. To r
 
 Finally we can fit the model using the `ranger` method of `caret::train()`. To reduce runtime, I set `mtry` to 3 and `min.node.size` to 5, the default for a regression. 
 
-> **Note:**
->
-> Since the model processing step takes a while, I saved the resulting model inside the `model_data` folder.
-
 ```{r model}
-if(FALSE){
-  mod_cv <- caret::train(
-    fun_pred, # Model function
-    data = df_train_upsamp, # training set
-    method = "ranger", # Random Forest model
-    trControl = traincntrlParams,
-    tuneGrid = data.frame(
-      .mtry = 3, 
-      .min.node.size = 5,
-      .splitrule = "variance"
-    )
+mod_cv <- caret::train(
+  fun_pred, # Model function
+  data = df_train_upsamp, # training set
+  method = "ranger", # Random Forest model
+  trControl = traincntrlParams,
+  tuneGrid = data.frame(
+    .mtry = 3, 
+    .min.node.size = 5,
+    .splitrule = "variance"
   )
-
- # Save model
-  saveRDS(object = mod_cv, file = "../model_data/mswm_model") 
-  
-}
+)
 ```
 
 Given the random forest model, we can now apply the model on the unseen test set.
 
 ```{r predict, message=FALSE}
-# Load model
-mod_cv <- readr::read_rds(
-  file.path("../model_data/", "mswm_model")
-)
-
 # Predict values
 pred <- predict(
   mod_cv,
