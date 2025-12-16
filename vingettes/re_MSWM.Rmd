@@ -1,0 +1,109 @@
+---
+title: "re_MWSM"
+author: "Flueckiger_Rubens"
+date: "2025-12-09"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float:
+      collapsed: FALSE
+      smoth_scroll: FALSE
+---
+
+# Packages
+
+```{r packages}
+library(dplyr)
+library(recipes)
+```
+
+# Datasets
+
+```{r datasets}
+df_test <- readr::read_csv("../data_raw/competition2025_testing_data.csv")
+df_train <- readr::read_csv("../data_raw/competition2025_training_data.csv")
+df_sites <- readr::read_csv("../data_raw/fdk_site_info.csv")
+```
+
+# Impute data
+
+```{r random classification}
+# Create random sample of 10'000 sites
+set.seed(155)
+idx <- sample(1:length(df_train$site), 10000)
+
+# Check if all sites are included in subset
+subset_sites <- unique(df_train[idx, "vegtype"])$vegtype
+vegtypes <- unique(df_train$vegtype)
+vegtypes[!(vegtypes %in% subset_sites)]
+```
+
+```{r fill NA train}
+if(FALSE){
+  
+  # Set recipe
+  pp_train <- recipe( # Set function to fill NA values
+    flue ~ NR_B1 + NR_B2 + NR_B3 + NR_B4 + NR_B5 + NR_B6 + NR_B7 + LST + t2m_era5 + ssrd_era5 + pcwd_era5 + vegtype, 
+    data = df_train # df containing these columns
+  ) |> 
+    step_impute_knn(all_predictors(), neighbors = 5) |> # KNN impute
+    step_center(all_numeric_predictors()) |> # Normalise data
+    step_scale(all_numeric_predictors()) # Normalise data
+  
+  # 'Train' recipe
+  trained <- prep(
+    pp_train, # recipe
+    training = df_train[idx, ], # 'Train' on reduced training set
+    verbose = TRUE # Return processing status
+  )
+  
+  # Apply 'trained' recipe on training data to impute NA values
+  train_data <- bake(trained, new_data = df_train)
+  
+  # Add necessary columns back to df
+  data_train <- train_data |> mutate(
+    site = df_train$site, # Site
+    date = df_train$date, # Date of sample
+    is_flue_drought = df_train$is_flue_drought, # Logical flue status
+    cluster = df_train$cluster # Clusters
+  ) 
+  
+  # Save imputed training file
+  readr::write_csv(data_train, file = "../data_raw/mswm_train_imputed")
+}
+```
+
+```{r fill NA test}
+if(FALSE){
+  
+  # Set recipe
+  pp_test <- recipe( # Set function to fill NA values
+    flue ~ NR_B1 + NR_B2 + NR_B3 + NR_B4 + NR_B5 + NR_B6 + NR_B7 + LST + t2m_era5 + ssrd_era5 + pcwd_era5 + vegtype, 
+    data = df_train # df containing these columns
+  ) |> 
+    step_dummy(vegtype, keep_original_cols = TRUE) |> # test contains additional vegtypes
+    step_impute_knn(all_predictors(), neighbors = 5) |> # KNN imputation
+    step_center(all_numeric_predictors()) |> # Normalise data
+    step_scale(all_numeric_predictors()) # Normalise data
+  
+  # 'Train' recipe
+  trained_test <- prep(
+    pp_test, # recipe
+    training = df_train[idx, ], # Train on reduced training set
+    verbose = TRUE # Return processing status
+  )
+
+  # Apply 'trained' recipe on test set to fill NA values
+  test_data <- bake(trained_test, new_data = df_test)
+  
+  data_test <- test_data[, c(1:12)] |> mutate( # Select only necessary columns
+    site = df_test$site, # Add site column
+    date = df_test$date, # Add date column
+    is_flue_drought = df_test$is_flue_drought, # Add drought status column
+    cluster = df_test$cluster # Add cluster column
+  )
+  
+  # Save imputed test file
+  readr::write_csv(data_test, file = "../data_raw/mswm_test_imputed") 
+}
+```
