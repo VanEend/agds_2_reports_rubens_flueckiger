@@ -1,5 +1,5 @@
 ---
-title: "Digital_soil_mapping"
+title: "Digital soil mapping"
 author: "Flueckiger_Rubens"
 date: "2025-11-05"
 output: 
@@ -8,9 +8,6 @@ output:
     toc_float:
       collapsed: FALSE
       smooth_scroll: FALSE
-editor_options: 
-  markdown: 
-    wrap: 72
 ---
 
 # 1 Packages
