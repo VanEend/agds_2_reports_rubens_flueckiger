@@ -1945,40 +1945,20 @@ fun_pred &lt;- formula(fun_pred)</code></pre>
 <code>caret::train()</code>. To reduce runtime, I set <code>mtry</code>
 to 3 and <code>min.node.size</code> to 5, the default for a
 regression.</p>
-<p>Finally we can fit the model using the <code>ranger</code> method of
-<code>caret::train()</code>. To reduce runtime, I set <code>mtry</code>
-to 3 and <code>min.node.size</code> to 5, the default for a
-regression.</p>
-<blockquote>
-<p><strong>Note:</strong></p>
-<p>Since the model processing step takes a while, I saved the resulting
-model inside the <code>model_data</code> folder.</p>
-</blockquote>
-<pre class="r"><code>if(FALSE){
-  mod_cv &lt;- caret::train(
-    fun_pred, # Model function
-    data = df_train_upsamp, # training set
-    method = &quot;ranger&quot;, # Random Forest model
-    trControl = traincntrlParams,
-    tuneGrid = data.frame(
-      .mtry = 3, 
-      .min.node.size = 5,
-      .splitrule = &quot;variance&quot;
-    )
+<pre class="r"><code>mod_cv &lt;- caret::train(
+  fun_pred, # Model function
+  data = df_train_upsamp, # training set
+  method = &quot;ranger&quot;, # Random Forest model
+  trControl = traincntrlParams,
+  tuneGrid = data.frame(
+    .mtry = 3, 
+    .min.node.size = 5,
+    .splitrule = &quot;variance&quot;
   )
-
- # Save model
-  saveRDS(object = mod_cv, file = &quot;../model_data/mswm_model&quot;) 
-  
-}</code></pre>
+)</code></pre>
 <p>Given the random forest model, we can now apply the model on the
 unseen test set.</p>
-<pre class="r"><code># Load model
-mod_cv &lt;- readr::read_rds(
-  file.path(&quot;../model_data/&quot;, &quot;mswm_model&quot;)
-)
-
-# Predict values
+<pre class="r"><code># Predict values
 pred &lt;- predict(
   mod_cv,
   newdata = df_test_imp
