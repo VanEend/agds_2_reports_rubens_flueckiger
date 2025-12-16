@@ -8,8 +8,6 @@ output:
     toc_float:
       collapsed: FALSE
       smooth_scroll: FALSE
-editor_options: 
-  chunk_output_type: inline
 ---
 
 # 1 Introduction
