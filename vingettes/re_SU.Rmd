@@ -257,9 +257,10 @@ Following groups can be observed:
 
 In addition, we can show the distribution of leaf N over one class using a violin plot.
 
-```{r violin spat, fig.align='center', fig.cap="Figure 3: Leaf nitrogen distribution of each class based on spatial classification using a violin plot"}
-ggplot(data = dfs, aes(x = class_spat, y = leafN, fill = class_spat)) +
-  geom_violin() + # Distribution using violin plot
+```{r dist spat, fig.align='center', fig.height=8, fig.cap="Figure 3: Leaf nitrogen distribution of each class based on spatial classification using a violin plot (top) and a line plot (bottom)"}
+# Distribution using violin plot
+p1 <- ggplot(data = dfs, aes(x = class_spat, y = leafN, fill = class_spat)) +
+  geom_violin() + 
   
   # Colour plot according to spatial distribution plot
   scale_fill_manual(values = brewer.pal(n = 5, "Set1")) +
@@ -268,12 +269,35 @@ ggplot(data = dfs, aes(x = class_spat, y = leafN, fill = class_spat)) +
   labs(
     x = "Class",
     y = "Leaf nitrogen",
-    title = "Distribution of Leaf N over each class",
+    title = "Violin plot of Leaf N over each class",
     subtitle = "Classification using geographical location"
   ) +
   
   theme_bw() +
   theme(legend.position = "") # Remove legend
+
+# Distribution using stat_density
+p2 <- ggplot(data = dfs, aes(x = leafN, colour = class_spat)) +
+  stat_density(geom = "line", linewidth = 0.7) +
+  
+  # Colour plot according spatial distribution
+  scale_color_manual(
+    values = brewer.pal(n = 5, "Set1"),
+    name = "Class"
+  ) +
+  
+  # Adjust labels
+  labs(
+    x = "Leaf nitrogen",
+    y = "Density",
+    title = "Distribution of Leaf N over each class",
+    subtitle = "Classification using geographical location"
+  ) +
+  
+  theme_bw() +
+  theme(legend.position = "right")
+
+cowplot::plot_grid(p1, p2, nrow = 2)
 ```
 
 From the distribution one can see that China, India, Australia class offers the widest range of observations, where as the eastern Europe, western Asia, Africa class and the northern Scandinavia class are heavily concentrated towards a small range of Leaf N values. Class America, Iberian peninsula, UK and class central Europe show very similar distribution with a two-peak distribution (a lower and a higher), where class central Europe shows general higher leaf N values compared to class America Iberian peninsula, UK.
@@ -478,9 +502,10 @@ Following groups can be observed from the table and the plot above:
 
 In addition, we can show the distribution of leaf N over one class using a violin plot.
 
-```{r violin env, fig.align='center', fig.cap="Figure 5: Leaf nitrogen distribution of each class based on environmental classification using a violin plot"}
-ggplot(data = dfs, aes(x = class_env, y = leafN, fill = class_env)) +
-  geom_violin() + # Distribution using violin plot
+```{r dist env, fig.align='center', fig.height=8, fig.cap="Figure 5: Leaf nitrogen distribution of each class based on environmental classification using a violin plot (top) and a line density plot (bottom)"}
+# Distribution using violin plot
+p3 <- ggplot(data = dfs, aes(x = class_env, y = leafN, fill = class_env)) +
+  geom_violin() + 
   
   # Colour plot according to environmental distribution plot
   scale_fill_manual(values = brewer.pal(n = 5, "Set1")) +
@@ -495,6 +520,29 @@ ggplot(data = dfs, aes(x = class_env, y = leafN, fill = class_env)) +
   
   theme_bw() +
   theme(legend.position = "") # Remove legend
+
+# Distribution using stat_density
+p4 <- ggplot(data = dfs, aes(x = leafN, colour = class_env)) +
+  stat_density(geom = "line", linewidth = 0.7) +
+  
+  # Colour plot according spatial distribution
+  scale_color_manual(
+    values = brewer.pal(n = 5, "Set1"),
+    name = "Class"
+  ) +
+  
+  # Adjust labels
+  labs(
+    x = "Leaf nitrogen",
+    y = "Density",
+    title = "Distribution of Leaf N over each class",
+    subtitle = "Classification using geographical location"
+  ) +
+  
+  theme_bw() +
+  theme(legend.position = "right")
+
+cowplot::plot_grid(p3, p4, nrow = 2)
 ```
 
 Except the subtropics and boreal zones class, which has to major maxima pretty close to each other, every class shows a major leaf N concentration with a tail towards higher leaf N concentrations. Class wet mid latitudes shows a major and a minor concentration distribution, where as in class cold and wet mid latitudes show a very strong major leaf N concentration. Class warm and dry mid latitudes and class tropical show a pretty similar distribution.
