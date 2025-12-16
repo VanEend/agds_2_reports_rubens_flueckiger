@@ -174,7 +174,7 @@ readr::write_csv(
                     flue_predicted = pred),
   file = "~/Desktop/VanEend_results_mswm.csv")
 ```
-=======
+
 # Upsample
 
 ```{r load imputed data}
@@ -245,4 +245,4 @@ knitr::kable(
   col.names = c("is fLUE drought", "Original dataset", "Upsampled dataset") # Column names
 )
 ```
->>>>>>> 786cdde13f69b5fa7a4bbf989deb3ca26a8897e4
+
