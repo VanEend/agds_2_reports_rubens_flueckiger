@@ -246,3 +246,66 @@ knitr::kable(
 )
 ```
 
+# Modelling
+
+```{r cv recipe}
+set.seed(155) # Set seed
+folds <- caret::groupKFold(df_train_upsamp$flue, k = 5) # prepare folds
+
+traincntrlParams <- caret::trainControl( # Set fold settings
+  index = folds,
+  method = "cv"
+)
+```
+
+```{r set predictors}
+# Select predictors
+predictors <- c(
+  "NR_B1", "NR_B2", "NR_B3", "NR_B4", "NR_B5", "NR_B6", "NR_B7",
+  "LST", "t2m_era5", "ssrd_era5", "pcwd_era5", "vegtype"
+)
+
+# Create string with all variables
+fun_pred <- paste(
+  c("flue ~", paste(predictors, collapse = " + ")),
+  collapse = " "
+)
+
+# Convert into a caret-readable string
+fun_pred <- formula(fun_pred)
+```
+
+```{r model}
+mod_cv <- caret::train(
+  fun_pred, # Model function
+  data = df_train_upsamp, # training set
+  method = "ranger", # Random Forest model
+  trControl = traincntrlParams,
+  tuneGrid = data.frame(
+    .mtry = 3, 
+    .min.node.size = 5,
+    .splitrule = "variance"
+  )
+)
+```
+
+```{r predict, message=FALSE}
+# Predict values
+pred <- predict(
+  mod_cv,
+  newdata = df_test_imp
+)
+```
+
+```{r save result}
+# Convert data into df format
+predicted_flue <- data.frame(pred)
+
+# Save df
+# Note: to not overwrite LULC prediction I have added the name of the repo
+# and renamed it after loading it into the folder
+readr::write_csv(
+  x = dplyr::rename(predicted_flue,
+                    flue_predicted = pred),
+  file = "~/Desktop/VanEend_results_mswm.csv")
+```
