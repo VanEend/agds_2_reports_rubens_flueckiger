@@ -15,6 +15,7 @@ output:
 ```{r packages}
 library(dplyr)
 library(recipes)
+library(themis)
 ```
 
 # Datasets
