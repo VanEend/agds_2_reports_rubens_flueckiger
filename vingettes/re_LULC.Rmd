@@ -1,5 +1,5 @@
 ---
-title: "re_LULC"
+title: "Land-Use and Land-Cover mapping"
 author: "Flueckiger_Rubens"
 date: "2025-11-11"
 output: 
