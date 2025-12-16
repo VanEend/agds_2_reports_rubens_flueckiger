@@ -107,3 +107,74 @@ if(FALSE){
   readr::write_csv(data_test, file = "../data_raw/mswm_test_imputed") 
 }
 ```
+
+# Upsample
+
+```{r load imputed data}
+# Load imputed files
+df_test_imp <- readr::read_csv("../data_raw/mswm_test_imputed")
+df_train_imp <- readr::read_csv("../data_raw/mswm_train_imputed")
+```
+
+```{r impute is_flue_drought}
+# Check for NA values for drought status
+flue_idx_na <- which(is.na(df_train_imp$is_flue_drought) == T)
+
+# Impute drought status column
+# Note: flue < 1 = TRUE (it is a drought)
+for(i in 1:length(flue_idx_na)){
+  ifelse(
+    df_train_imp[flue_idx_na[i], "flue"] < 1,
+    df_train_imp[flue_idx_na[i], "is_flue_drought"] <- TRUE,
+    df_train_imp[flue_idx_na[i], "is_flue_drought"] <- FALSE
+  )
+}
+```
+
+```{r original ratio}
+# Distribution of drought and moist before upsampling
+orig <- count(df_train_imp, is_flue_drought, name = "orig")
+
+# Create table
+knitr::kable(
+  orig, # df
+  align = "lc", # Information position
+  caption = "Table 1: Amount of fLUE moist (FALSE) and drought (TRUE) observation", # Table caption
+  col.names = c("is fLUE drought", "Original dataset") # Column names
+)
+```
+
+```{r upsampling}
+# Change is_flue_drought values to factor format
+df_train_imp_adj <- df_train_imp |> mutate(
+  is_flue_drought = as.factor(is_flue_drought)
+)
+
+# upsampling recipe
+pp_upsample <- recipe(
+  is_flue_drought ~ ., # Set function 
+  data = df_train_imp_adj # df
+) |> themis::step_upsample(
+    is_flue_drought, # Column to consider
+    over_ratio = 0.5 # Final ratio between major and minor class
+) |> prep() # 'Train' recipe
+
+# Apply 'trained' recipe
+df_train_upsamp <- bake(pp_upsample, new_data = NULL)
+```
+
+```{r upsampled ratio}
+# Distribution of drought and not drought after upsampling
+upsamp <- count(df_train_upsamp, is_flue_drought, name = "upsamp")
+
+# Combine upsample and original ratio information
+stat <- cbind(orig, upsamp)[, c(1, 2, 4)] # Only select relevant columns
+
+# Create table
+knitr::kable(
+  stat, # df
+  align = "lcc", # Information position
+  caption = "Table 2: Comparing amount of fLUE moist (FALSE) and drought (TRUE) observation before and after upsampling", # Table caption
+  col.names = c("is fLUE drought", "Original dataset", "Upsampled dataset") # Column names
+)
+```
