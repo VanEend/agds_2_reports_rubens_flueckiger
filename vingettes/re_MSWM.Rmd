@@ -374,9 +374,7 @@ fun_pred <- formula(fun_pred)
 
 Finally we can fit the model using the `ranger` method of `caret::train()`. To reduce runtime, I set `mtry` to 3 and `min.node.size` to 5, the default for a regression.
 
-Finally we can fit the model using the `ranger` method of `caret::train()`. To reduce runtime, I set `mtry` to 3 and `min.node.size` to 5, the default for a regression. 
-
-```{r model}
+```{r model, eval=FALSE}
 mod_cv <- caret::train(
   fun_pred, # Model function
   data = df_train_upsamp, # training set
@@ -392,7 +390,7 @@ mod_cv <- caret::train(
 
 Given the random forest model, we can now apply the model on the unseen test set.
 
-```{r predict, message=FALSE}
+```{r predict, message=FALSE, eval=FALSE}
 # Predict values
 pred <- predict(
   mod_cv,
@@ -402,7 +400,7 @@ pred <- predict(
 
 The resulting predictions will be saved for the competition.
 
-```{r save result}
+```{r save result, eval=FALSE}
 # Convert data into df format
 predicted_flue <- data.frame(pred)
 
