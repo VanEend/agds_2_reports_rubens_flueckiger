@@ -1675,8 +1675,8 @@ chapter as the <em>hyperparamters to consider</em> values.</p>
 <blockquote>
 <p><strong>Note</strong></p>
 <p>This processing step takes a while (it took me about 7 hours). I
-therefore opted to save the result inside the <em>LULC_model_data</em>
-folder such that one does not need to re-run this step.</p>
+therefore opted to save the result inside the <em>model_data</em> folder
+such that one does not need to re-run this step.</p>
 <p>Furthermore, the control parameter of the function includes the
 statement <em>verbose = TRUE</em>. This statement is not necessarily
 needed. However, it returns information’s about the current execution
@@ -1696,7 +1696,7 @@ a while to process a model.</p>
   )
   
   # Save final data set
-  saveRDS(object = xgb_results, file = &quot;../LULC_model_data/xgb_result&quot;)
+  saveRDS(object = xgb_results, file = &quot;../data/LULC/model_data/xgb_result&quot;)
 }</code></pre>
 <p>Sine the parameter tuning step will return 25 models (5 folds each
 containing 5 grid values) including its predicted statistics, we now
@@ -1707,7 +1707,7 @@ let the metric on which to decide the best performing model identical to
 the tutorial (<code>roc_auc</code>; the area under the ROC-curve).</p>
 <pre class="r"><code># Load tuned parameters data set
 xgb_results &lt;- readr::read_rds(
-  file.path(&quot;../LULC_model_data/&quot;, &quot;xgb_result&quot;)
+  file.path(&quot;../data/LULC/model_data/&quot;, &quot;xgb_result&quot;)
 )
 
 # Select best model according to metric
@@ -1747,19 +1747,19 @@ print(xgb_best_hp)</code></pre>
 <p>With the given best model from the <a href="#parameter-tuning">4.3
 Parameter tuning</a> chapter, we can now fit a model on the training
 data. This step takes again very long to execute, hence I saved the
-output model inside the <em>LULC_model_data</em> folder.</p>
+output model inside the <em>model_data</em> folder.</p>
 <pre class="r"><code>if(FALSE){
   # Fit best model
   xgb_best_model &lt;- fit(xgb_best_hp, train)
   
   # Save model
-  saveRDS(xgb_best_model, file = &quot;../LULC_model_data/xgb_best_model&quot;)
+  saveRDS(xgb_best_model, file = &quot;../data/LULC/model_data/xgb_best_model&quot;)
 }</code></pre>
 <p>Finally we can predict the landcover class of the test set with the
 fitted model above.</p>
 <pre class="r"><code># Load fitted model
 xgb_best_model &lt;- readr::read_rds(
-  file.path(&quot;../LULC_model_data/&quot;, &quot;xgb_best_model&quot;)
+  file.path(&quot;../data/LULC/model_data/&quot;, &quot;xgb_best_model&quot;)
 )
 
 # Predict result on test set
