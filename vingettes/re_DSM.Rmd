@@ -43,7 +43,7 @@ To implement the random forest model we will need the following data
 set.
 
 ```{r load data}
-df <- readRDS("../data_raw/df_digital_soil_mapping.rds")
+df <- readRDS("../data/Digital_soil_mapping/df_digital_soil_mapping.rds")
 ```
 
 # 3 Simple model

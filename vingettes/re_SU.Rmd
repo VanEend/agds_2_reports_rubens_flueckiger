@@ -43,7 +43,7 @@ library(skimr)
 library(tidyverse)
 ```
 
-In a next step we can load the data set. Since the data set will be loaded from the internet, I will store it additionally inside the *data_raw* folder such that the file can be reproduced without internet access. To ensure that the file loading process will not be executed again it will be enclosed within a `if(FALSE){}` statement.
+In a next step we can load the data set. Since the data set will be loaded from the internet, I will store it additionally inside the *data* folder such that the file can be reproduced without internet access. To ensure that the file loading process will not be executed again it will be enclosed within a `if(FALSE){}` statement.
 
 ```{r dataframe, message=FALSE}
 if(FALSE){
@@ -53,12 +53,12 @@ if(FALSE){
   # Safe df for offline use
   write.csv(
     df,
-    file = "../data_raw/leafnp_data", # Location
+    file = "../data/Spatial_Upscalling/leafnp_data", # Location
     row.names = FALSE # Don't save indices
   )
 }
 
-df <- readr::read_csv("../data_raw/leafnp_data")
+df <- readr::read_csv("../data/Spatial_Upscalling/leafnp_data")
 ```
 
 ## 3.1 Data preprocessing
@@ -476,7 +476,7 @@ ggplot() +
 To interpret the resulting classifications we need informations about the mean over one class of mean annual temperature and mean annual precipitation. As the training and testing set split will be done later on, I already generated a data frame containing the results.
 
 ```{r table, message=FALSE}
-climate <- readr::read_csv("../data_raw/climate_table")
+climate <- readr::read_csv("../data/Spatial_Upscalling/climate_table")
 
 knitr::kable(
   climate,
@@ -595,7 +595,7 @@ if(FALSE){
   # Save file
   write.csv(
     climate,
-    file = "../data_raw/climate_table",
+    file = "../data/Spatial_Upscalling/climate_table",
     row.names = FALSE
   )
 }

@@ -41,12 +41,12 @@ if(FALSE){
   # Test set
   download.file(
     url = "https://zenodo.org/records/8298491/files/test_data.rds?download=1",     
-    destfile = file.path("../data_raw/", "test_data.rds"))
+    destfile = file.path("../data/LULC/", "test_data.rds"))
   
   # Training set
   download.file(
     url = "https://zenodo.org/records/8298491/files/training_data.rds?download=1", 
-    destfile = file.path("../data_raw/", "training_data.rds"))
+    destfile = file.path("../data/LULC/", "training_data.rds"))
 }
 ```
 
@@ -54,9 +54,9 @@ Finally, we can load the dataset from the local folder. In the same step we will
 
 ```{r load files, results='hide'}
 test_data_Zenodo <- readr::read_rds(
-  file.path("../data_raw/", "test_data.rds"))
+  file.path("../data/LULC/", "test_data.rds"))
 training_data_Zenodo <- readr::read_rds(
-  file.path("../data_raw/", "training_data.rds"))
+  file.path("../data/LULC/", "training_data.rds"))
 
 # ensure training and test data contain same predictor/feature variables
 setdiff(names(training_data_Zenodo), 

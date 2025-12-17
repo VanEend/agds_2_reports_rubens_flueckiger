@@ -33,9 +33,9 @@ library(themis)
 In a first step we will load in the training and test set as well as a data frame containing informations about the stations used to retrieve multispectral informations.
 
 ```{r datasets, message=FALSE}
-df_test <- readr::read_csv("../data_raw/competition2025_testing_data.csv")
-df_train <- readr::read_csv("../data_raw/competition2025_training_data.csv")
-df_sites <- readr::read_csv("../data_raw/fdk_site_info.csv")
+df_test <- readr::read_csv("../data/MSWM/competition2025_testing_data.csv")
+df_train <- readr::read_csv("../data/MSWM/competition2025_training_data.csv")
+df_sites <- readr::read_csv("../data/MSWM/fdk_site_info.csv")
 ```
 
 ## 3.1 Data location
@@ -72,7 +72,7 @@ As one can see, not every site is included in the site-information dataset. Ther
 
 ```{r additional sites, message=FALSE}
 # Load information about missing sites
-add_sites <- readr::read_csv("../data_raw/fdk_additional_sites.csv")
+add_sites <- readr::read_csv("../data/MSWM/fdk_additional_sites.csv")
 
 # Combine additional sites and present sites into one dataset
 relevant_sites <- rbind(relevant_sites, add_sites)
@@ -213,7 +213,7 @@ if(FALSE){
   ) 
   
   # Save imputed training file
-  readr::write_csv(data_train, file = "../data_raw/mswm_train_imputed")
+  readr::write_csv(data_train, file = "../data/MSWM/mswm_train_imputed")
 }
 ```
 
@@ -250,7 +250,7 @@ if(FALSE){
   )
   
   # Save imputed test file
-  readr::write_csv(data_test, file = "../data_raw/mswm_test_imputed") 
+  readr::write_csv(data_test, file = "../data/MSWM/mswm_test_imputed") 
 }
 ```
 
@@ -260,8 +260,8 @@ With the imputation step done, we can now start to overemphasize fLUE values of 
 
 ```{r load imputed data, message=FALSE}
 # Load imputed files
-df_test_imp <- readr::read_csv("../data_raw/mswm_test_imputed")
-df_train_imp <- readr::read_csv("../data_raw/mswm_train_imputed")
+df_test_imp <- readr::read_csv("../data/MSWM/mswm_test_imputed")
+df_train_imp <- readr::read_csv("../data/MSWM/mswm_train_imputed")
 ```
 
 Next we need to make sure, that conditional variable `is_flue_drought` does not contain any missing values. As we now that `is_flue_drought` will take the value `TRUE` if the fLUE value is below 1 and `FALSE` if not, we can simply impute missing values manually.

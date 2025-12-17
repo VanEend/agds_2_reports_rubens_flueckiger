@@ -1562,8 +1562,8 @@ the model result with the “actual” observations.</p>
 <h2>3.1 Load phenocam data</h2>
 <p>In a first step we will acquire the Phenocam data set of the Harvard
 data set. To improve the loading speed I saved the data set into the
-<em>data_raw</em> folder and used a if(FALSE) string to prevent the code
-to re-upload the data set from the Phenocam server.</p>
+<em>data</em> folder and used a if(FALSE) string to prevent the code to
+re-upload the data set from the Phenocam server.</p>
 <pre class="r"><code>#Phenocam data
 if(FALSE){ #Prevents re-load
   download_phenocam(
@@ -1573,7 +1573,7 @@ if(FALSE){ #Prevents re-load
     daymet = TRUE,
     phenophase = TRUE,
     trim = 2022,
-    out_dir = &quot;../data_raw/&quot; #Store data set in folder
+    out_dir = &quot;../data/Phenology_modelling/&quot; #Store data set in folder
   )
 }</code></pre>
 <p>Afterwards we can simply load in the necessary data sets. The first
@@ -1581,12 +1581,12 @@ data set (1.) contains the temperature information and the second (2.)
 information about leave out dates.</p>
 <pre class="r"><code># 1. Temperature information
 harvard_data &lt;- read.table(
-  &quot;../data_raw/harvard_DB_1000_3day.csv&quot;,
+  &quot;../data/Phenology_modelling/harvard_DB_1000_3day.csv&quot;,
   header = T, sep = &quot;,&quot;)
 
 # 2. Day of leave out information
 harvard_phenology &lt;- read.table(
-  &quot;../data_raw/harvard_DB_1000_3day_transition_dates.csv&quot;,
+  &quot;../data/Phenology_modelling/harvard_DB_1000_3day_transition_dates.csv&quot;,
   header = T, sep = &quot;,&quot;
 )</code></pre>
 <div id="preprocess-data" class="section level3">
@@ -1652,7 +1652,7 @@ data as well.</p>
 <h3>3.2.1 MCD12Q2</h3>
 <p>First we will acquire the MCD12Q2 data set. I used the if(FALSE)
 statement again to prevent a re-acquire of the data set, since I stored
-the needed files in the <em>data_raw</em> folder. As I encountered some
+the needed files in the <em>data</em> folder. As I encountered some
 difficulties to plot the MCD12Q2 file on a netcdf4 format, I decided to
 store the the file in a geotiff format. Since both formats work with the
 <code>terra</code> package we do not have to worry about further
@@ -1702,7 +1702,7 @@ complications.</p>
     request = task,
     user = &quot;vaneend&quot;,
     transfer = TRUE,
-    path = &quot;../data_raw/&quot;, #Store data set in folder
+    path = &quot;../data/Phenology_modelling/&quot;, #Store data set in folder
     verbose = TRUE
   )
 }</code></pre>
@@ -1751,7 +1751,7 @@ netcdf4 format.</p>
     request = task,
     user = &quot;vaneend&quot;,
     transfer = TRUE,
-    path = &quot;../data_raw/&quot;,
+    path = &quot;../data/Phenology_modelling/&quot;,
     verbose = TRUE
   )
 }</code></pre>
@@ -2031,7 +2031,7 @@ numerical values of the DOY variable to start at 1 at the 1. January
 2010. Note that we might need to discard values below the 1.1.2010. This
 set will serve as the reference result.</p>
 <pre class="r"><code>r1 &lt;- terra::rast(
-  &quot;../data_raw/MCD12Q2.061_2010/MCD12Q2.061_Greenup_0_doy2010001000000_aid0001.tif&quot;
+  &quot;../data/Phenology_modelling/MCD12Q2.061_2010/MCD12Q2.061_Greenup_0_doy2010001000000_aid0001.tif&quot;
   )
 terra::crs(r1) &lt;- &quot;epsg:4326&quot;
 
@@ -2081,7 +2081,7 @@ sets.</p>
 <p>To reduce run time of the code, I will only consider the first 180
 days of 2010 to be relevant for the date of leave out.</p>
 </blockquote>
-<pre class="r"><code>r_temp &lt;- terra::rast(&quot;../data_raw/DAYMET.004_2010/DAYMET.004_1km_aid0001.nc&quot;)
+<pre class="r"><code>r_temp &lt;- terra::rast(&quot;../data/Phenology_modelling/DAYMET.004_2010/DAYMET.004_1km_aid0001.nc&quot;)
 
 #Seperate maximum and minimum temperature values
 r_tmax &lt;- r_temp[&quot;tmax&quot;]

@@ -1525,9 +1525,9 @@ library(themis)</code></pre>
 <p>In a first step we will load in the training and test set as well as
 a data frame containing informations about the stations used to retrieve
 multispectral informations.</p>
-<pre class="r"><code>df_test &lt;- readr::read_csv(&quot;../data_raw/competition2025_testing_data.csv&quot;)
-df_train &lt;- readr::read_csv(&quot;../data_raw/competition2025_training_data.csv&quot;)
-df_sites &lt;- readr::read_csv(&quot;../data_raw/fdk_site_info.csv&quot;)</code></pre>
+<pre class="r"><code>df_test &lt;- readr::read_csv(&quot;../data/MSWM/competition2025_testing_data.csv&quot;)
+df_train &lt;- readr::read_csv(&quot;../data/MSWM/competition2025_training_data.csv&quot;)
+df_sites &lt;- readr::read_csv(&quot;../data/MSWM/fdk_site_info.csv&quot;)</code></pre>
 <div id="data-location" class="section level2">
 <h2>3.1 Data location</h2>
 <p>In a next step we can display the spatial distribution of all sites
@@ -1572,7 +1572,7 @@ with <code>NA</code>.</p></li>
 </ul>
 </blockquote>
 <pre class="r"><code># Load information about missing sites
-add_sites &lt;- readr::read_csv(&quot;../data_raw/fdk_additional_sites.csv&quot;)
+add_sites &lt;- readr::read_csv(&quot;../data/MSWM/fdk_additional_sites.csv&quot;)
 
 # Combine additional sites and present sites into one dataset
 relevant_sites &lt;- rbind(relevant_sites, add_sites)</code></pre>
@@ -1744,7 +1744,7 @@ statement.</p>
   ) 
   
   # Save imputed training file
-  readr::write_csv(data_train, file = &quot;../data_raw/mswm_train_imputed&quot;)
+  readr::write_csv(data_train, file = &quot;../data/MSWM/mswm_train_imputed&quot;)
 }</code></pre>
 <p>Since the testing set contains vegetation types outside the training
 set we additionally need to add a <code>step_dummy()</code> function to
@@ -1781,7 +1781,7 @@ for the test set.</p>
   )
   
   # Save imputed test file
-  readr::write_csv(data_test, file = &quot;../data_raw/mswm_test_imputed&quot;) 
+  readr::write_csv(data_test, file = &quot;../data/MSWM/mswm_test_imputed&quot;) 
 }</code></pre>
 </div>
 <div id="upsample" class="section level1">
@@ -1790,8 +1790,8 @@ for the test set.</p>
 values of drought situations. First however, we need to load the
 previously imputed datasets.</p>
 <pre class="r"><code># Load imputed files
-df_test_imp &lt;- readr::read_csv(&quot;../data_raw/mswm_test_imputed&quot;)
-df_train_imp &lt;- readr::read_csv(&quot;../data_raw/mswm_train_imputed&quot;)</code></pre>
+df_test_imp &lt;- readr::read_csv(&quot;../data/MSWM/mswm_test_imputed&quot;)
+df_train_imp &lt;- readr::read_csv(&quot;../data/MSWM/mswm_train_imputed&quot;)</code></pre>
 <p>Next we need to make sure, that conditional variable
 <code>is_flue_drought</code> does not contain any missing values. As we
 now that <code>is_flue_drought</code> will take the value

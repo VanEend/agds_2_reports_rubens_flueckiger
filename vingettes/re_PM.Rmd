@@ -44,7 +44,7 @@ To determine the optimal hyperparamteres of the GDD function, we will need a ref
 
 ## 3.1 Load phenocam data
 
-In a first step we will acquire the Phenocam data set of the Harvard data set. To improve the loading speed I saved the data set into the *data_raw* folder and used a if(FALSE) string to prevent the code to re-upload the data set from the Phenocam server.
+In a first step we will acquire the Phenocam data set of the Harvard data set. To improve the loading speed I saved the data set into the *data* folder and used a if(FALSE) string to prevent the code to re-upload the data set from the Phenocam server.
 
 ```{r phenocam data}
 #Phenocam data
@@ -56,7 +56,7 @@ if(FALSE){ #Prevents re-load
     daymet = TRUE,
     phenophase = TRUE,
     trim = 2022,
-    out_dir = "../data_raw/" #Store data set in folder
+    out_dir = "../data/Phenology_modelling/" #Store data set in folder
   )
 }
 ```
@@ -66,12 +66,12 @@ Afterwards we can simply load in the necessary data sets. The first data set (1.
 ```{r load data}
 # 1. Temperature information
 harvard_data <- read.table(
-  "../data_raw/harvard_DB_1000_3day.csv",
+  "../data/Phenology_modelling/harvard_DB_1000_3day.csv",
   header = T, sep = ",")
 
 # 2. Day of leave out information
 harvard_phenology <- read.table(
-  "../data_raw/harvard_DB_1000_3day_transition_dates.csv",
+  "../data/Phenology_modelling/harvard_DB_1000_3day_transition_dates.csv",
   header = T, sep = ","
 )
 ```
@@ -126,7 +126,7 @@ To acquire the NASA raster data MCD12Q2 and DAYMET we will repeat the same proce
 
 ### 3.2.1 MCD12Q2
 
-First we will acquire the MCD12Q2 data set. I used the if(FALSE) statement again to prevent a re-acquire of the data set, since I stored the needed files in the *data_raw* folder. As I encountered some difficulties to plot the MCD12Q2 file on a netcdf4 format, I decided to store the the file in a geotiff format. Since both formats work with the `terra` package we do not have to worry about further complications.
+First we will acquire the MCD12Q2 data set. I used the if(FALSE) statement again to prevent a re-acquire of the data set, since I stored the needed files in the *data* folder. As I encountered some difficulties to plot the MCD12Q2 file on a netcdf4 format, I decided to store the the file in a geotiff format. Since both formats work with the `terra` package we do not have to worry about further complications.
 
 ```{r set cooridnates}
 if(FALSE){ #Prevents re-load
@@ -174,7 +174,7 @@ if(FALSE){ #Prevents re-load
     request = task,
     user = "vaneend",
     transfer = TRUE,
-    path = "../data_raw/", #Store data set in folder
+    path = "../data/Phenology_modelling/", #Store data set in folder
     verbose = TRUE
   )
 }
@@ -224,7 +224,7 @@ if(FALSE){
     request = task,
     user = "vaneend",
     transfer = TRUE,
-    path = "../data_raw/",
+    path = "../data/Phenology_modelling/",
     verbose = TRUE
   )
 }
@@ -427,7 +427,7 @@ In a first step we will load in the MCD12Q2 data set, set the coordinate referen
 
 ```{r load observed data}
 r1 <- terra::rast(
-  "../data_raw/MCD12Q2.061_2010/MCD12Q2.061_Greenup_0_doy2010001000000_aid0001.tif"
+  "../data/Phenology_modelling/MCD12Q2.061_2010/MCD12Q2.061_Greenup_0_doy2010001000000_aid0001.tif"
   )
 terra::crs(r1) <- "epsg:4326"
 
@@ -469,7 +469,7 @@ In the next step we will create the spacial result given the predictions we made
 > To reduce run time of the code, I will only consider the first 180 days of 2010 to be relevant for the date of leave out.
 
 ```{r load daymet data}
-r_temp <- terra::rast("../data_raw/DAYMET.004_2010/DAYMET.004_1km_aid0001.nc")
+r_temp <- terra::rast("../data/Phenology_modelling/DAYMET.004_2010/DAYMET.004_1km_aid0001.nc")
 
 #Seperate maximum and minimum temperature values
 r_tmax <- r_temp["tmax"]

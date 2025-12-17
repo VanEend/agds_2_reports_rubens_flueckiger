@@ -1565,7 +1565,7 @@ library(skimr)
 library(tidyverse)</code></pre>
 <p>In a next step we can load the data set. Since the data set will be
 loaded from the internet, I will store it additionally inside the
-<em>data_raw</em> folder such that the file can be reproduced without
+<em>data</em> folder such that the file can be reproduced without
 internet access. To ensure that the file loading process will not be
 executed again it will be enclosed within a <code>if(FALSE){}</code>
 statement.</p>
@@ -1576,12 +1576,12 @@ statement.</p>
   # Safe df for offline use
   write.csv(
     df,
-    file = &quot;../data_raw/leafnp_data&quot;, # Location
+    file = &quot;../data/Spatial_Upscalling/leafnp_data&quot;, # Location
     row.names = FALSE # Don&#39;t save indices
   )
 }
 
-df &lt;- readr::read_csv(&quot;../data_raw/leafnp_data&quot;)</code></pre>
+df &lt;- readr::read_csv(&quot;../data/Spatial_Upscalling/leafnp_data&quot;)</code></pre>
 <div id="data-preprocessing" class="section level2">
 <h2>3.1 Data preprocessing</h2>
 <p>Now we will create a subset of the original data, which only contains
@@ -2360,7 +2360,7 @@ dataset
 the mean over one class of mean annual temperature and mean annual
 precipitation. As the training and testing set split will be done later
 on, I already generated a data frame containing the results.</p>
-<pre class="r"><code>climate &lt;- readr::read_csv(&quot;../data_raw/climate_table&quot;)
+<pre class="r"><code>climate &lt;- readr::read_csv(&quot;../data/Spatial_Upscalling/climate_table&quot;)
 
 knitr::kable(
   climate,

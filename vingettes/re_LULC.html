@@ -1553,20 +1553,20 @@ Since this process shall not be repeated again, it is enclosed inside a
   # Test set
   download.file(
     url = &quot;https://zenodo.org/records/8298491/files/test_data.rds?download=1&quot;,     
-    destfile = file.path(&quot;../data_raw/&quot;, &quot;test_data.rds&quot;))
+    destfile = file.path(&quot;../data/LULC/&quot;, &quot;test_data.rds&quot;))
   
   # Training set
   download.file(
     url = &quot;https://zenodo.org/records/8298491/files/training_data.rds?download=1&quot;, 
-    destfile = file.path(&quot;../data_raw/&quot;, &quot;training_data.rds&quot;))
+    destfile = file.path(&quot;../data/LULC/&quot;, &quot;training_data.rds&quot;))
 }</code></pre>
 <p>Finally, we can load the dataset from the local folder. In the same
 step we will ensure that the training and test set contain the same
 predictors and feature variables.</p>
 <pre class="r"><code>test_data_Zenodo &lt;- readr::read_rds(
-  file.path(&quot;../data_raw/&quot;, &quot;test_data.rds&quot;))
+  file.path(&quot;../data/LULC/&quot;, &quot;test_data.rds&quot;))
 training_data_Zenodo &lt;- readr::read_rds(
-  file.path(&quot;../data_raw/&quot;, &quot;training_data.rds&quot;))
+  file.path(&quot;../data/LULC/&quot;, &quot;training_data.rds&quot;))
 
 # ensure training and test data contain same predictor/feature variables
 setdiff(names(training_data_Zenodo), 
