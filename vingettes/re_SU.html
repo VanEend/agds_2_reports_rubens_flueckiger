@@ -2054,7 +2054,7 @@ Norway</li>
 <li>China, India and Australia</li>
 </ul>
 <p>In addition, we can show the distribution of leaf N over one class
-using a violin plot.</p>
+using a violin plot and a density curve.</p>
 <pre class="r"><code># Distribution using violin plot
 p1 &lt;- ggplot(data = dfs, aes(x = class_spat, y = leafN, fill = class_spat)) +
   geom_violin() + 
@@ -2169,12 +2169,12 @@ train_test_by_fold &lt;- function(df, idx_train, idx_val){
 </div>
 <div id="modelling" class="section level2">
 <h2>5.4 Modelling</h2>
-<p>Given the classes derived in chapter x we can now split the data into
-a training and testing data for the 5-fold CV. We thereby define the
-test sets to contain only one class (e.g. class 1) and the training set
-to contain the remaining classes (e.g. 2 to 5). We will do that for
-every class available. This operation can be performed using the
-<code>purrr::map()</code> function.</p>
+<p>Given the classes derived in chapter <a href="#spatial-classification">5.2 Spatial classification</a> we can now
+split the data into a training and testing data for the 5-fold CV. We
+thereby define the test sets to contain only one class (e.g. class 1)
+and the training set to contain the remaining classes (e.g. 2 to 5). We
+will do that for every class available. This operation can be performed
+using the <code>purrr::map()</code> function.</p>
 <pre class="r"><code># Return Indices of every class except searched one
 group_folds_train &lt;- purrr::map(
   seq(length(unique(dfs$class_spat))), # Amount of classes
@@ -2283,11 +2283,25 @@ knitr::kable(
 compared to the spatial CV. Three folds of the spatial CV seam to have a
 pretty similar <span class="math inline">\(R^2\)</span> and <span class="math inline">\(RMSE\)</span> value, which suggest that these
 folds are pretty similar to each other. These folds are located in
-Europe (W-Europe &amp; NA, Central Europe, Scandinavia). As already
-discussed in the chapter <a href="#literature-analysis">2 Literature
-analysis</a>, spatial CV offers a more realistic split of training data
-into n different folds compared to random CV, which thereby leads to a
-more generalisable approach for predicting unseen data.</p>
+Europe (W-Europe &amp; NA, Central Europe, E-Europe &amp; Asia/Africa).
+The remaining two folds seam to differ more. <span class="math inline">\(R^2\)</span> and <span class="math inline">\(RMSE\)</span> value are significantly worse
+compared to the random CV and the other 3 folds, suggesting a large
+difference in environmental condition between these two folds and the
+others. I therefore suspect that these two folds contain the
+China/Australia fold (the one with the highest <span class="math inline">\(RMSE\)</span> value) and probably the Scandinavia
+(the one with the lower <span class="math inline">\(RMSE\)</span>) as
+they might differ more strongly compared to the European folds. As
+already discussed in the chapter <a href="#literature-analysis">2
+Literature analysis</a>, spatial CV offers a more realistic split of
+training data into n different folds compared to random CV, which
+thereby leads to a more generalisable approach for predicting unseen
+data. However, as one can see, this approach is only viable if the
+target site is sufficiently near to the training site. As soon as the
+target site is too far away from the training site, which is most
+prominently visible in the China/Australia fold, the spatial CV approach
+does not yield comparable or even better results compared to a simple
+random CV approach. Hence, the applicability of a target site has to be
+given in order to apply a spatial CV approach.</p>
 </div>
 </div>
 <div id="environmental-cv" class="section level1">
@@ -2420,7 +2434,7 @@ precipitation</p></li>
 <li><p>Tropical; High temperature and precipitation</p></li>
 </ul>
 <p>In addition, we can show the distribution of leaf N over one class
-using a violin plot.</p>
+using a violin plot and a density curve.</p>
 <pre class="r"><code># Distribution using violin plot
 p3 &lt;- ggplot(data = dfs, aes(x = class_env, y = leafN, fill = class_env)) +
   geom_violin() + 
@@ -2618,13 +2632,18 @@ nearly identical over all folds suggesting a very good generalisability.
 Compared to spatial CV, environmental CV offers a even more realistic
 depiction of reality, as it uses a directly dependent variable (in this
 case precipitation and temperature) to divide the training set into n
-different folds, compared to spatial CV, which <em>“only”</em> used a
+different folds, compared to spatial CV, which “<em>only</em>” used a
 indirect variable (longitude and latitude) to split training data into
 folds. As discussed in the <a href="#literature-analysis">2 Literature
 analysis</a> chapter, this approach should yield an even better
 generalisability due to the fact that we use direct dependent variables
 as the split-metric compared to an arbitrary split, which only makes
-sure that the distribution <em>“looks the same”</em>.</p>
+sure that the distribution “<em>looks the same</em>”. In summary one can
+note that a environmental CV can yield a better performance for unseen
+data if observations are unevenly distributed in space. Non the less,
+the area of applicability is crucial in the understanding if a predicted
+variable might be plausible or not, especially for a spatial CV
+approach.</p>
 </div>
 </div>
 <div id="sources" class="section level1">

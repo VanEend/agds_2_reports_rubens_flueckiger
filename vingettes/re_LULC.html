@@ -1666,11 +1666,12 @@ print(hp_settings)</code></pre>
 <h2>4.3 Parameter tuning</h2>
 <p>Now we can start to tune the parameters. To do so, we will use the
 <code>tune_grid()</code> function of the <code>tune</code> package. To
-include a cross validation, we <code>tune_grid()</code> necessitates a
-specific format of data frame, wich the function <code>vfold_cv()</code>
-of the package <code>rsample</code> offers. We will use the workflow
-generated in the <a href="#create-model">4.1 Create model</a> chapter as
-the input training data and the hyperparamter grid generated in the <a href="#latin-hypercube-sampling">4.2 Latin Hypercube Sampling</a>
+include a cross validation, <code>tune_grid()</code> necessitates a
+specific format of data frame, which the function
+<code>vfold_cv()</code> of the package <code>rsample</code> offers. We
+will use the workflow generated in the <a href="#create-model">4.1
+Create model</a> chapter as the input training data and the
+hyperparamter grid generated in the <a href="#latin-hypercube-sampling">4.2 Latin Hypercube Sampling</a>
 chapter as the <em>hyperparamters to consider</em> values.</p>
 <blockquote>
 <p><strong>Note</strong></p>
@@ -1771,9 +1772,9 @@ take the results of the model into account but also the run time. In
 this case optimizing the model by including more hyperparameters to
 adjust and adding more models to choose the best out of from
 significantly increased the total run time of the code (all in all it
-took me about 7.5 hours). This certainly raises the question whether if
-a only slightly worse performing model, which only takes half the time
-(or even less) to compute, should be taken in favor of the
+took me about 7.5 hours). This certainly raises the question whether a
+only slightly worse performing model, which only takes half the time (or
+even less) to compute, could/should be taken in favour of the
 <em>better</em> performing model.</p>
 </div>
 </div>

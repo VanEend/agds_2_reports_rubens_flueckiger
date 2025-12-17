@@ -1883,7 +1883,7 @@ leaf-out dates. The resulting calibrated hyperparameters and the
 goodness of the result is strongly dependent on the calibration method
 and LOESS function used. In the book a <em>simulated annealing</em> (SA)
 method combined with root mean square error (RMSE) LOESS function was
-chosen. To compare the results, I have chosen to remain with the SA such
+chosen. To compare the results, I have chosen to stick with the SA such
 that the result of my optimization of the GDD function can be compared
 with the result given in the book. However, for larger data sets one
 might consider using the Bayesian optimization method due to the fact
@@ -1967,8 +1967,8 @@ predictions &lt;- na.omit(predictions) |&gt;
 <p>Given the resulting data frame, we can now plot the observed values
 (phenology data set) with the predicted values. I added a dotted line,
 which should represent the ideal case, where the predicted values
-exactly math the observed values, as well as a solid line, which
-represent a linear fit through the plotted data (i.e. the mean modeled
+exactly match the observed values, as well as a solid line, which
+represent a linear fit through the plotted data (i.e. the mean modelled
 vs. observed case deviation).</p>
 <pre class="r"><code>ggplot(data = predictions) +
   geom_point(aes(

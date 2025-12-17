@@ -10,7 +10,11 @@ output:
       smooth_scroll: FALSE
 ---
 
-# 1 Packages
+# 1 Introduction
+
+In this report exercise we will predict a waterlogged soil based on three different models; a simple model which takes every parameter given in a training set as an input and a categorical value (either 1 for waterlogged or 0 for not waterlogged) as an output, a more sophisticated model on which we will only take a subset of (relevant) predictors of the training set into account for predicting a waterlogged soil, a model for which hyperparameters are adjusted to improve the modelling performance and a probabilistic model, which returns a probability of a soil being waterlogged. Finally, all methods are compared to each other in order to determine the best approach of correctly identifying a waterlogged soil.
+
+# 2 Packages
 
 To solve the report exercise, the following packages will be needed.
 
@@ -37,7 +41,7 @@ library(ranger)
 library(tidyr)
 ```
 
-# 2 Load data sets
+# 3 Load data sets
 
 To implement the random forest model we will need the following data
 set.
@@ -46,10 +50,10 @@ set.
 df <- readRDS("../data/Digital_soil_mapping/df_digital_soil_mapping.rds")
 ```
 
-# 3 Simple model
+# 4 Simple model
 
 In a first step we will re-implement the workflow given in the *Digital
-Soil Mapping* chapter. However, instead of specially predicting the pH
+Soil Mapping* chapter. However, instead of spacially predicting the pH
 at the top 10cm `pH.0.10` we will model whether the soil is waterlogged
 at a depth of 100cm `waterlog.100` or not.
 
@@ -58,7 +62,7 @@ at a depth of 100cm `waterlog.100` or not.
 > The variable `waterlog.100` is categorical/binary. It can only obtain
 > two values; 1 if it is waterlogged at 100cm depth and 0 if not.
 
-## 3.1 Preprocessing
+## 4.1 Preprocessing
 
 To simplify the selection of variables needed to perform a *Random
 Forest* modelling we first define the target variable (here:
@@ -84,7 +88,7 @@ df_train <- df |> filter(dataset == "calibration") |> drop_na()
 df_test <- df |> filter(dataset == "validation") |> drop_na()
 ```
 
-## 3.2 Model training
+## 4.2 Model training
 
 Now we can start modelling. Since the target variable (`waterlog.100`)
 is categorical, we will need to specify the character of the vector as
@@ -104,7 +108,7 @@ rf_basic <- ranger(
 rf_basic
 ```
 
-## 3.3 Model evaluation
+## 4.3 Model evaluation
 
 To evaluate the model, we will apply the generated Random Forest model
 on the test set separated in chapter [3.1 Preprocessing].
@@ -177,19 +181,17 @@ knitr::kable(
 ```
 
 As one can see, the training and test set are skewed towards not
-waterlogged sites. This has a huge effect on the model performance.
-Assuming we have a data set with 90% containing only 1's and the
-remaining 10% only 0's. This means that if we create a model that always
-predicts 1, we would achieve an accuracy of 90%. This obviously is not
-desired when implementing a model and has to be accounted for.
+waterlogged sites. This has a huge effect on the model performance. To see why lets assume we have a data set with 90% containing only 1's (waterlogged sites) and the
+remaining 10% only 0's (non-waterlogged sites). If we create a model that always
+predicts 1 as an outcome, we would achieve an accuracy of 90% correct predicted waterlogged sites, which seams impressive at a first glance however this does not really represent the reality very much. In our case, overemphasising non-waterlogged sites might impacting falsely predicting a waterlogged site as a non-waterlogged site, which is not desired.
 
-# 4 Variable selection
+# 5 Variable selection
 
 In this chapter, we will select only those variables which yield the
 most importance in explaining the target variable (`waterlog.100`) and
 compare the result with the result given in chapter [3 Simple model].
 
-## 4.1 Select variables
+## 5.1 Select variables
 
 To select the most explaining variables I will use the `Boruta` package.
 In addition I will return the hierarchy of importance of each variable.
@@ -235,7 +237,7 @@ predictors_selected <- df_bor |>
   pull(rowname) # Extract rownames from it
 ```
 
-## 4.2 Train new model
+## 5.2 Train new model
 
 We can now apply the same model as in chapter [3.2 Model training],
 however we will limit the training set variables to those extracted in
@@ -257,7 +259,7 @@ rf_bor <- ranger(
 rf_bor
 ```
 
-## 4.3 Evaluate new model
+## 5.3 Evaluate new model
 
 Now we can repeat the same step as in chapter [3.3 Model evaluation].
 
@@ -320,17 +322,17 @@ generalizes better given every metric above. Additionally the OOB is
 specified. Since the OOB of the model with selected variables is lower
 than the OOB of the simple model, the model with selected variables
 would still be chosen, as a lower OOB score describes a more accurate
-model.
+model. This was to be expected, since taking every variable inside the training set as predictor has the effect of overfitting the model.
 
-# 5 Model optimization
+# 6 Model optimization
 
 The aim of this chapter is to improve the initial simple model by
 tweaking the hyperparamteres `mtry` and `min.node.size` with the help of
 the `caret` package.
 
-## 5.1 Hyperparameter adjustment
+## 6.1 Hyperparameter adjustment
 
-Finally we want to optimize the model by tweaking the `mtry` and
+Now we want to optimize the model by tweaking the `mtry` and
 `min.node.size` parameters of the `ranger` model function. Hereby we
 will use the `caret` package. In a first step however, we need to
 specify all dependent variables on our target variables and convert that
@@ -389,7 +391,7 @@ The resulting optimal values for the hyperparamters are:
 -   `mtry`: 10
 -   `min.node.size`: 50
 
-## 5.2 Train optimized model
+## 6.2 Train optimized model
 
 To train the new model we simply repeat the step as in chapters [3.2
 Model training] and [4.2 Train new model] and add `mtry` and
@@ -408,7 +410,7 @@ rf_optim <- ranger(
 rf_optim
 ```
 
-## 5.3 Evaluate optimized model
+## 6.3 Evaluate optimized model
 
 To evaluate the optimized model we can repeat the process from chapter
 [3.3 Model evaluation] or [4.3 Evaluate new model].
@@ -460,15 +462,15 @@ knitr::kable(
 Each metric displayed in the table above is about as large as the
 metrics of the variable selection model (VS Model) and larger than the
 metric in the initial model. Therefore, the new, optimized model
-generalizes better than the initial, simple model.
+generalizes better than the initial, simple model but does not significantly improve the model performance compared to the model only considering relevant varables as predictors.
 
-# 6 Probabilistic predictions
+# 7 Probabilistic predictions
 
 The aim of this chapter is to create a Reicever-operating-characteristic
 (ROC) curve given a probailistical prediction of a soil being
 waterlogged.
 
-## 6.1 Train probabilistic model
+## 7.1 Train probabilistic model
 
 To model if a soil is waterlogged probabilisticaly, we can apply the
 same model as in chapter [5.2 Train optimized model] and add the
@@ -488,7 +490,7 @@ rf_prob <- ranger(
 rf_prob
 ```
 
-## 6.2 ROC curve
+## 7.2 ROC curve
 
 To create the ROC curve we need to apply the model onto the test set.
 The resulting data will now no longer be in a binary form but in a
@@ -541,7 +543,7 @@ ggplot(data = df_eval_prob, aes(d = waterlog.100, m = pred_1)) +
 The resulting curve (solid black line) clearly displays a better than
 "random guess" model, denoted as the dashed line.
 
-## 6.3 Additional questions
+## 7.3 Additional questions
 
 The threshold value chosen to determine whether a soil should be
 attributed to a waterlogged soil or not can be used to limit false

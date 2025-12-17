@@ -398,9 +398,11 @@ pred <- predict(
 )
 ```
 
-The resulting predictions will be saved for the competition.
+The resulting predictions will be saved for the competition. 
 
-```{r save result, eval=FALSE}
+As the test set does not contain the actual fLUE values, comparing predicted and observed is not possible. However, one could improve my results by considering more than 10'000 observations. Similar to the results from the LULC-exercise, one has to ask whether the benefits gained by considering a larger subset of training sites outweighs the drawbacks occurring through the longer runtime.
+
+```{r save result, eval=FALSE, echo=FALSE}
 # Convert data into df format
 predicted_flue <- data.frame(pred)
 

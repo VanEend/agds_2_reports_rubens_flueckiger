@@ -253,7 +253,7 @@ Following groups can be observed:
 -   Northern Scandinavia
 -   China, India and Australia
 
-In addition, we can show the distribution of leaf N over one class using a violin plot.
+In addition, we can show the distribution of leaf N over one class using a violin plot and a density curve.
 
 ```{r dist spat, fig.align='center', fig.height=8, fig.cap="Figure 3: Leaf nitrogen distribution of each class based on spatial classification using a violin plot (top) and a line plot (bottom)"}
 # Distribution using violin plot
@@ -351,7 +351,7 @@ train_test_by_fold <- function(df, idx_train, idx_val){
 
 ## 5.4 Modelling
 
-Given the classes derived in chapter x we can now split the data into a training and testing data for the 5-fold CV. We thereby define the test sets to contain only one class (e.g. class 1) and the training set to contain the remaining classes (e.g. 2 to 5). We will do that for every class available. This operation can be performed using the `purrr::map()` function.
+Given the classes derived in chapter [5.2 Spatial classification] we can now split the data into a training and testing data for the 5-fold CV. We thereby define the test sets to contain only one class (e.g. class 1) and the training set to contain the remaining classes (e.g. 2 to 5). We will do that for every class available. This operation can be performed using the `purrr::map()` function.
 
 ```{r split geo data}
 # Return Indices of every class except searched one
@@ -413,7 +413,7 @@ knitr::kable(
 )
 ```
 
-One can see that in general the random CV performs a bit better compared to the spatial CV. Three folds of the spatial CV seam to have a pretty similar $R^2$ and $RMSE$ value, which suggest that these folds are pretty similar to each other. These folds are located in Europe (W-Europe & NA, Central Europe, Scandinavia). As already discussed in the chapter [2 Literature analysis], spatial CV offers a more realistic split of training data into n different folds compared to random CV, which thereby leads to a more generalisable approach for predicting unseen data.
+One can see that in general the random CV performs a bit better compared to the spatial CV. Three folds of the spatial CV seam to have a pretty similar $R^2$ and $RMSE$ value, which suggest that these folds are pretty similar to each other. These folds are located in Europe (W-Europe & NA, Central Europe, E-Europe & Asia/Africa). The remaining two folds seam to differ more. $R^2$ and $RMSE$ value are significantly worse compared to the random CV and the other 3 folds, suggesting a large difference in environmental condition between these two folds and the others. I therefore suspect that these two folds contain the China/Australia fold (the one with the highest $RMSE$ value) and probably the Scandinavia (the one with the lower $RMSE$) as they might differ more strongly compared to the European folds. As already discussed in the chapter [2 Literature analysis], spatial CV offers a more realistic split of training data into n different folds compared to random CV, which thereby leads to a more generalisable approach for predicting unseen data. However, as one can see, this approach is only viable if the target site is sufficiently near to the training site. As soon as the target site is too far away from the training site, which is most prominently visible in the China/Australia fold, the spatial CV approach does not yield comparable or even better results compared to a simple random CV approach. Hence, the applicability of a target site has to be given in order to apply a spatial CV approach.
 
 # 6 Environmental CV
 
@@ -498,7 +498,7 @@ Following groups can be observed from the table and the plot above:
 
 -   Tropical; High temperature and precipitation
 
-In addition, we can show the distribution of leaf N over one class using a violin plot.
+In addition, we can show the distribution of leaf N over one class using a violin plot and a density curve.
 
 ```{r dist env, fig.align='center', fig.height=8, fig.cap="Figure 5: Leaf nitrogen distribution of each class based on environmental classification using a violin plot (top) and a line density plot (bottom)"}
 # Distribution using violin plot
@@ -636,7 +636,7 @@ knitr::kable(
 )
 ```
 
-Environmental CV does perform about as good as random CV and a bit better than spatial CV. $R^2$ and $RMSE$ values of environmental CV are nearly identical over all folds suggesting a very good generalisability. Compared to spatial CV, environmental CV offers a even more realistic depiction of reality, as it uses a directly dependent variable (in this case precipitation and temperature) to divide the training set into n different folds, compared to spatial CV, which *"only"* used a indirect variable (longitude and latitude) to split training data into folds. As discussed in the [2 Literature analysis] chapter, this approach should yield an even better generalisability due to the fact that we use direct dependent variables as the split-metric compared to an arbitrary split, which only makes sure that the distribution *"looks the same"*.
+Environmental CV does perform about as good as random CV and a bit better than spatial CV. $R^2$ and $RMSE$ values of environmental CV are nearly identical over all folds suggesting a very good generalisability. Compared to spatial CV, environmental CV offers a even more realistic depiction of reality, as it uses a directly dependent variable (in this case precipitation and temperature) to divide the training set into n different folds, compared to spatial CV, which "*only*" used a indirect variable (longitude and latitude) to split training data into folds. As discussed in the [2 Literature analysis] chapter, this approach should yield an even better generalisability due to the fact that we use direct dependent variables as the split-metric compared to an arbitrary split, which only makes sure that the distribution "*looks the same*". In summary one can note that a environmental CV can yield a better performance for unseen data if observations are unevenly distributed in space. Non the less, the area of applicability is crucial in the understanding if a predicted variable might be plausible or not, especially for a spatial CV approach.
 
 # 7 Sources
 

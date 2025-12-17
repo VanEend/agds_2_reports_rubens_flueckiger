@@ -1492,8 +1492,22 @@ font-size: 0.95em;
 </div>
 
 
+<div id="introduction" class="section level1">
+<h1>1 Introduction</h1>
+<p>In this report exercise we will predict a waterlogged soil based on
+three different models; a simple model which takes every parameter given
+in a training set as an input and a categorical value (either 1 for
+waterlogged or 0 for not waterlogged) as an output, a more sophisticated
+model on which we will only take a subset of (relevant) predictors of
+the training set into account for predicting a waterlogged soil, a model
+for which hyperparameters are adjusted to improve the modelling
+performance and a probabilistic model, which returns a probability of a
+soil being waterlogged. Finally, all methods are compared to each other
+in order to determine the best approach of correctly identifying a
+waterlogged soil.</p>
+</div>
 <div id="packages" class="section level1">
-<h1>1 Packages</h1>
+<h1>2 Packages</h1>
 <p>To solve the report exercise, the following packages will be
 needed.</p>
 <blockquote>
@@ -1518,15 +1532,15 @@ library(ranger)
 library(tidyr)</code></pre>
 </div>
 <div id="load-data-sets" class="section level1">
-<h1>2 Load data sets</h1>
+<h1>3 Load data sets</h1>
 <p>To implement the random forest model we will need the following data
 set.</p>
 <pre class="r"><code>df &lt;- readRDS(&quot;../data/Digital_soil_mapping/df_digital_soil_mapping.rds&quot;)</code></pre>
 </div>
 <div id="simple-model" class="section level1">
-<h1>3 Simple model</h1>
+<h1>4 Simple model</h1>
 <p>In a first step we will re-implement the workflow given in the
-<em>Digital Soil Mapping</em> chapter. However, instead of specially
+<em>Digital Soil Mapping</em> chapter. However, instead of spacially
 predicting the pH at the top 10cm <code>pH.0.10</code> we will model
 whether the soil is waterlogged at a depth of 100cm
 <code>waterlog.100</code> or not.</p>
@@ -1537,7 +1551,7 @@ only obtain two values; 1 if it is waterlogged at 100cm depth and 0 if
 not.</p>
 </blockquote>
 <div id="preprocessing" class="section level2">
-<h2>3.1 Preprocessing</h2>
+<h2>4.1 Preprocessing</h2>
 <p>To simplify the selection of variables needed to perform a <em>Random
 Forest</em> modelling we first define the target variable (here:
 <code>waterlog.100</code>) and the necessary variables we will apply the
@@ -1557,7 +1571,7 @@ performing the Random Forest classification, we will drop all
 df_test &lt;- df |&gt; filter(dataset == &quot;validation&quot;) |&gt; drop_na()</code></pre>
 </div>
 <div id="model-training" class="section level2">
-<h2>3.2 Model training</h2>
+<h2>4.2 Model training</h2>
 <p>Now we can start modelling. Since the target variable
 (<code>waterlog.100</code>) is categorical, we will need to specify the
 character of the vector as categorical by using the function
@@ -1589,10 +1603,9 @@ rf_basic</code></pre>
 ## OOB prediction error:             21.32 %</code></pre>
 </div>
 <div id="model-evaluation" class="section level2">
-<h2>3.3 Model evaluation</h2>
+<h2>4.3 Model evaluation</h2>
 <p>To evaluate the model, we will apply the generated Random Forest
-model on the test set separated in chapter <a href="#preprocessing">3.1
-Preprocessing</a>.</p>
+model on the test set separated in chapter [3.1 Preprocessing].</p>
 <pre class="r"><code># Predict waterlog.100 on test set
 rf_eval &lt;- predict(
   rf_basic, # Model
@@ -1699,21 +1712,25 @@ waterlogged (0) for the test and training set</caption>
 </tbody>
 </table>
 <p>As one can see, the training and test set are skewed towards not
-waterlogged sites. This has a huge effect on the model performance.
-Assuming we have a data set with 90% containing only 1’s and the
-remaining 10% only 0’s. This means that if we create a model that always
-predicts 1, we would achieve an accuracy of 90%. This obviously is not
-desired when implementing a model and has to be accounted for.</p>
+waterlogged sites. This has a huge effect on the model performance. To
+see why lets assume we have a data set with 90% containing only 1’s
+(waterlogged sites) and the remaining 10% only 0’s (non-waterlogged
+sites). If we create a model that always predicts 1 as an outcome, we
+would achieve an accuracy of 90% correct predicted waterlogged sites,
+which seams impressive at a first glance however this does not really
+represent the reality very much. In our case, overemphasising
+non-waterlogged sites might impacting falsely predicting a waterlogged
+site as a non-waterlogged site, which is not desired.</p>
 </div>
 </div>
 <div id="variable-selection" class="section level1">
-<h1>4 Variable selection</h1>
+<h1>5 Variable selection</h1>
 <p>In this chapter, we will select only those variables which yield the
 most importance in explaining the target variable
 (<code>waterlog.100</code>) and compare the result with the result given
-in chapter <a href="#simple-model">3 Simple model</a>.</p>
+in chapter [3 Simple model].</p>
 <div id="select-variables" class="section level2">
-<h2>4.1 Select variables</h2>
+<h2>5.1 Select variables</h2>
 <p>To select the most explaining variables I will use the
 <code>Boruta</code> package. In addition I will return the hierarchy of
 importance of each variable.</p>
@@ -1759,9 +1776,10 @@ row names from the resulting data frame above.</p>
   pull(rowname) # Extract rownames from it</code></pre>
 </div>
 <div id="train-new-model" class="section level2">
-<h2>4.2 Train new model</h2>
-<p>We can now apply the same model as in chapter <a href="#model-training">3.2 Model training</a>, however we will limit the
-training set variables to those extracted in chapter <a href="#train-new-model">4.2 Train new model</a>.</p>
+<h2>5.2 Train new model</h2>
+<p>We can now apply the same model as in chapter [3.2 Model training],
+however we will limit the training set variables to those extracted in
+chapter [4.2 Train new model].</p>
 <blockquote>
 <p><strong>Note</strong></p>
 <p>We again need to use the function <code>factor</code> to specify the
@@ -1791,8 +1809,9 @@ rf_bor</code></pre>
 ## OOB prediction error:             20.00 %</code></pre>
 </div>
 <div id="evaluate-new-model" class="section level2">
-<h2>4.3 Evaluate new model</h2>
-<p>Now we can repeat the same step as in chapter <a href="#model-evaluation">3.3 Model evaluation</a>.</p>
+<h2>5.3 Evaluate new model</h2>
+<p>Now we can repeat the same step as in chapter [3.3 Model
+evaluation].</p>
 <pre class="r"><code>rf_eval_vs &lt;- predict(
   rf_bor,           # RF model
   data = df_test,   # Predictor data
@@ -1920,24 +1939,25 @@ variables generalizes better given every metric above. Additionally the
 OOB is specified. Since the OOB of the model with selected variables is
 lower than the OOB of the simple model, the model with selected
 variables would still be chosen, as a lower OOB score describes a more
-accurate model.</p>
+accurate model. This was to be expected, since taking every variable
+inside the training set as predictor has the effect of overfitting the
+model.</p>
 </div>
 </div>
 <div id="model-optimization" class="section level1">
-<h1>5 Model optimization</h1>
+<h1>6 Model optimization</h1>
 <p>The aim of this chapter is to improve the initial simple model by
 tweaking the hyperparamteres <code>mtry</code> and
 <code>min.node.size</code> with the help of the <code>caret</code>
 package.</p>
 <div id="hyperparameter-adjustment" class="section level2">
-<h2>5.1 Hyperparameter adjustment</h2>
-<p>Finally we want to optimize the model by tweaking the
-<code>mtry</code> and <code>min.node.size</code> parameters of the
-<code>ranger</code> model function. Hereby we will use the
-<code>caret</code> package. In a first step however, we need to specify
-all dependent variables on our target variables and convert that into a
-<code>caret</code> readable format with the <code>formula()</code>
-function.</p>
+<h2>6.1 Hyperparameter adjustment</h2>
+<p>Now we want to optimize the model by tweaking the <code>mtry</code>
+and <code>min.node.size</code> parameters of the <code>ranger</code>
+model function. Hereby we will use the <code>caret</code> package. In a
+first step however, we need to specify all dependent variables on our
+target variables and convert that into a <code>caret</code> readable
+format with the <code>formula()</code> function.</p>
 <pre class="r"><code># Create string with all variables
 fun_pred &lt;- paste(
   c(&quot;waterlog.100 ~&quot;, paste(predictors, collapse = &quot; + &quot;)),
@@ -2017,9 +2037,11 @@ mod_cv</code></pre>
 </ul>
 </div>
 <div id="train-optimized-model" class="section level2">
-<h2>5.2 Train optimized model</h2>
-<p>To train the new model we simply repeat the step as in chapters <a href="#model-training">3.2 Model training</a> and <a href="#train-new-model">4.2 Train new model</a> and add
-<code>mtry</code> and <code>min.node.size</code> values from chapter <a href="#hyperparameter-adjustment">5.1 Hyperparameter adjustment</a>.</p>
+<h2>6.2 Train optimized model</h2>
+<p>To train the new model we simply repeat the step as in chapters [3.2
+Model training] and [4.2 Train new model] and add <code>mtry</code> and
+<code>min.node.size</code> values from chapter [5.1 Hyperparameter
+adjustment].</p>
 <pre class="r"><code>rf_optim &lt;- ranger( 
   formula = factor(df_train[, target]) ~ ., # target variable
   data = df_train[, predictors_selected], # Predictor variables
@@ -2046,9 +2068,9 @@ rf_optim</code></pre>
 ## OOB prediction error:             20.17 %</code></pre>
 </div>
 <div id="evaluate-optimized-model" class="section level2">
-<h2>5.3 Evaluate optimized model</h2>
+<h2>6.3 Evaluate optimized model</h2>
 <p>To evaluate the optimized model we can repeat the process from
-chapter <a href="#model-evaluation">3.3 Model evaluation</a> or <a href="#evaluate-new-model">4.3 Evaluate new model</a>.</p>
+chapter [3.3 Model evaluation] or [4.3 Evaluate new model].</p>
 <pre class="r"><code>rf_eval_optim &lt;- predict(
   rf_optim, # RF model
   data = df_test, # Predictor data
@@ -2172,20 +2194,22 @@ optimized hyperparameter model in this chapter</caption>
 <p>Each metric displayed in the table above is about as large as the
 metrics of the variable selection model (VS Model) and larger than the
 metric in the initial model. Therefore, the new, optimized model
-generalizes better than the initial, simple model.</p>
+generalizes better than the initial, simple model but does not
+significantly improve the model performance compared to the model only
+considering relevant varables as predictors.</p>
 </div>
 </div>
 <div id="probabilistic-predictions" class="section level1">
-<h1>6 Probabilistic predictions</h1>
+<h1>7 Probabilistic predictions</h1>
 <p>The aim of this chapter is to create a
 Reicever-operating-characteristic (ROC) curve given a probailistical
 prediction of a soil being waterlogged.</p>
 <div id="train-probabilistic-model" class="section level2">
-<h2>6.1 Train probabilistic model</h2>
+<h2>7.1 Train probabilistic model</h2>
 <p>To model if a soil is waterlogged probabilisticaly, we can apply the
-same model as in chapter <a href="#train-optimized-model">5.2 Train
-optimized model</a> and add the <code>probability = TRUE</code>
-statement to the <code>ranger()</code> function.</p>
+same model as in chapter [5.2 Train optimized model] and add the
+<code>probability = TRUE</code> statement to the <code>ranger()</code>
+function.</p>
 <pre class="r"><code>rf_prob &lt;- ranger( 
   formula = factor(df_train[, target]) ~ ., # target variable
   data = df_train[, predictors_selected], # Predictor variables
@@ -2213,7 +2237,7 @@ rf_prob</code></pre>
 ## OOB prediction error (Brier s.):  0.1463028</code></pre>
 </div>
 <div id="roc-curve" class="section level2">
-<h2>6.2 ROC curve</h2>
+<h2>7.2 ROC curve</h2>
 <p>To create the ROC curve we need to apply the model onto the test set.
 The resulting data will now no longer be in a binary form but in a
 continuous form, where the values range from zero to one and
@@ -2268,7 +2292,7 @@ waterlogged
 “random guess” model, denoted as the dashed line.</p>
 </div>
 <div id="additional-questions" class="section level2">
-<h2>6.3 Additional questions</h2>
+<h2>7.3 Additional questions</h2>
 <p>The threshold value chosen to determine whether a soil should be
 attributed to a waterlogged soil or not can be used to limit false
 predictions. Assuming we will use the probability of a soil being

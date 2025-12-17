@@ -121,7 +121,7 @@ print(hp_settings)
 
 ## 4.3 Parameter tuning
 
-Now we can start to tune the parameters. To do so, we will use the `tune_grid()` function of the `tune` package. To include a cross validation, we `tune_grid()` necessitates a specific format of data frame, wich the function `vfold_cv()` of the package `rsample` offers. We will use the workflow generated in the [4.1 Create model] chapter as the input training data and the hyperparamter grid generated in the [4.2 Latin Hypercube Sampling] chapter as the *hyperparamters to consider* values.
+Now we can start to tune the parameters. To do so, we will use the `tune_grid()` function of the `tune` package. To include a cross validation, `tune_grid()` necessitates a specific format of data frame, which the function `vfold_cv()` of the package `rsample` offers. We will use the workflow generated in the [4.1 Create model] chapter as the input training data and the hyperparamter grid generated in the [4.2 Latin Hypercube Sampling] chapter as the *hyperparamters to consider* values.
 
 > **Note**
 >
@@ -196,7 +196,7 @@ xgb_best_model <- readr::read_rds(
 test_results <- predict(xgb_best_model, test)
 ```
 
-Since the actual landcover class was removed from the test set for the competition, we cannot further analyse the model performance. However, one can say that *optimizing a model* should not only take the results of the model into account but also the run time. In this case optimizing the model by including more hyperparameters to adjust and adding more models to choose the best out of from significantly increased the total run time of the code (all in all it took me about 7.5 hours). This certainly raises the question whether if a only slightly worse performing model, which only takes half the time (or even less) to compute, should be taken in favor of the *better* performing model.
+Since the actual landcover class was removed from the test set for the competition, we cannot further analyse the model performance. However, one can say that *optimizing a model* should not only take the results of the model into account but also the run time. In this case optimizing the model by including more hyperparameters to adjust and adding more models to choose the best out of from significantly increased the total run time of the code (all in all it took me about 7.5 hours). This certainly raises the question whether a only slightly worse performing model, which only takes half the time (or even less) to compute, could/should be taken in favour of the *better* performing model.
 
 ```{r csv, echo=FALSE}
 #Save resulting class as CSV for competition

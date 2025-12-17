@@ -1964,16 +1964,12 @@ pred &lt;- predict(
   newdata = df_test_imp
 )</code></pre>
 <p>The resulting predictions will be saved for the competition.</p>
-<pre class="r"><code># Convert data into df format
-predicted_flue &lt;- data.frame(pred)
-
-# Save df
-# Note: to not overwrite LULC prediction I have added the name of the repo
-# and renamed it after loading it into the folder
-readr::write_csv(
-  x = dplyr::rename(predicted_flue,
-                    flue_predicted = pred),
-  file = &quot;~/Desktop/VanEend_results_mswm.csv&quot;)</code></pre>
+<p>As the test set does not contain the actual fLUE values, comparing
+predicted and observed is not possible. However, one could improve my
+results by considering more than 10’000 observations. Similar to the
+results from the LULC-exercise, one has to ask whether the benefits
+gained by considering a larger subset of training sites outweighs the
+drawbacks occurring through the longer runtime.</p>
 </div>
 
 

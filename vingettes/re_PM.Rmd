@@ -313,7 +313,7 @@ ggplot(data = harvard_filter) +
 
 # 5 Optimal GDD
 
-To derive an optimal value for the critical value of the GDD (GDD_Crit) such that the plants start to leaf-out and for $t_{ref}$, one can calibrate the GDD model hyperparamters *GDD_Crit* and $t_{ref}$ with past observations of leaf-out dates. The resulting calibrated hyperparameters and the goodness of the result is strongly dependent on the calibration method and LOESS function used. In the book a *simulated annealing* (SA) method combined with root mean square error (RMSE) LOESS function was chosen. To compare the results, I have chosen to remain with the SA such that the result of my optimization of the GDD function can be compared with the result given in the book. However, for larger data sets one might consider using the Bayesian optimization method due to the fact that the latter method converges faster to an "optimal" solution. In addition it is worth mentioning at this point that the SA-method is a heuristic method. The problem with heuristic optimization models are that they do not always find *the* optimal solution. If *the* optimal solution wants to be found, one might consider using an alternative optimization tool.
+To derive an optimal value for the critical value of the GDD (GDD_Crit) such that the plants start to leaf-out and for $t_{ref}$, one can calibrate the GDD model hyperparamters *GDD_Crit* and $t_{ref}$ with past observations of leaf-out dates. The resulting calibrated hyperparameters and the goodness of the result is strongly dependent on the calibration method and LOESS function used. In the book a *simulated annealing* (SA) method combined with root mean square error (RMSE) LOESS function was chosen. To compare the results, I have chosen to stick with the SA such that the result of my optimization of the GDD function can be compared with the result given in the book. However, for larger data sets one might consider using the Bayesian optimization method due to the fact that the latter method converges faster to an "optimal" solution. In addition it is worth mentioning at this point that the SA-method is a heuristic method. The problem with heuristic optimization models are that they do not always find *the* optimal solution. If *the* optimal solution wants to be found, one might consider using an alternative optimization tool.
 
 ## 5.1 LOESS function
 
@@ -379,7 +379,7 @@ predictions <- na.omit(predictions) |>
   )
 ```
 
-Given the resulting data frame, we can now plot the observed values (phenology data set) with the predicted values. I added a dotted line, which should represent the ideal case, where the predicted values exactly math the observed values, as well as a solid line, which represent a linear fit through the plotted data (i.e. the mean modeled vs. observed case deviation).
+Given the resulting data frame, we can now plot the observed values (phenology data set) with the predicted values. I added a dotted line, which should represent the ideal case, where the predicted values exactly match the observed values, as well as a solid line, which represent a linear fit through the plotted data (i.e. the mean modelled vs. observed case deviation).
 
 ```{r model parameters, echo=FALSE}
 #Extract coefficients of model
