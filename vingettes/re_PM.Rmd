@@ -35,7 +35,7 @@ library(ggplot2)
 library(phenocamr)
 library(sf)
 
-source("../functions/GDD_functions.R")
+source("../functions/Phenology_modelling_functions.R")
 ```
 
 # 3 Load data
